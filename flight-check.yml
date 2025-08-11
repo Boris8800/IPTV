@@ -24,5 +24,9 @@ jobs:
       - name: Run flight bot
         run: npm start
         env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          CHAT_ID: ${{ secrets.CHAT_ID }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.8369195868:AAGxoIVt8pCMO4qdRIor6fDEmlBlGqkgwzo }}
+          CHAT_ID: ${{ secrets.1282174548 }}
+
+
+
+          
