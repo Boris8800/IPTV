@@ -1,136 +1,77 @@
-const puppeteer = require('puppeteer');
 const fetch = require('node-fetch');
+const { Telegraf } = require('telegraf');
 
-const TELEGRAM_BOT_TOKEN = '8369195868:AAGxoIVt8pCMO4qdRIor6fDEmlBlGqkgwzo';
-const CHAT_ID = '1282174548';
+const TELEGRAM_BOT_TOKEN = '8369195868:AAGxoIVt8pCMO4qdRIor6fDEmlBlGqkgwzo'; // Tu token Telegram
+const CHAT_ID = 1282174548; // Tu chat ID
 
-async function sendTelegramMessage(chat_id, text) {
-  const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      chat_id,
-      text,
-      parse_mode: 'Markdown',
-      disable_web_page_preview: true,
-    }),
-  });
+const AERODATABOX_CLIENT_ID = 'b88008800@gmail.com-api-client';
+const AERODATABOX_CLIENT_SECRET = 'C8RLV81IuttFvdAK5vJHpBWlCnWnqfBZ';
 
-  if (!res.ok) {
-    throw new Error('Error sending Telegram message');
-  }
-  console.log(`Telegram message sent to ${chat_id}:`, text);
-}
+const bot = new Telegraf(TELEGRAM_BOT_TOKEN);
 
-function parseTimeToDate(timeStr) {
+// Función para obtener vuelos a BHX en las próximas 3 horas
+async function getFlightsToBHX() {
   const now = new Date();
-  const [hours, minutes] = timeStr.split(':').map(Number);
-  const flightDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes);
-  if (flightDate < now) flightDate.setDate(flightDate.getDate() + 1);
-  return flightDate;
-}
+  const offsetMinutes = 0; // Ajusta según zona horaria si quieres
+  const durationMinutes = 180; // 3 horas
 
-async function getFlightsReport() {
-  console.log('Chromium path:', puppeteer.executablePath());
+  const url = `https://aerodatabox.p.rapidapi.com/flights/airports/iata/BHX?offsetMinutes=${offsetMinutes}&durationMinutes=${durationMinutes}&withLeg=true&direction=Arrival`;
 
-  const browser = await puppeteer.launch({
-    headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox'],
-    executablePath: puppeteer.executablePath(),
-  });
+  const headers = {
+    'x-rapidapi-host': 'aerodatabox.p.rapidapi.com',
+    'x-rapidapi-key': AERODATABOX_CLIENT_SECRET, // Usar API key aquí, el clientSecret parece el API key en tu caso
+  };
 
-  const page = await browser.newPage();
-
-  await page.goto('https://www.birminghamairport.co.uk/flights/arrivals/', { waitUntil: 'networkidle2' });
-  await page.waitForTimeout(5000);
-
-  const flightsData = await page.evaluate(() => {
-    const rows = Array.from(document.querySelectorAll('.flights__row'));
-    return rows.map(row => {
-      const flightNumber = row.querySelector('.flights__flight-number')?.innerText.trim() || 'N/A';
-      const origin = row.querySelector('.flights__origin')?.innerText.trim() || 'N/A';
-      const scheduledTime = row.querySelector('.flights__scheduled-time')?.innerText.trim() || 'N/A';
-      const status = row.querySelector('.flights__status')?.innerText.trim().toLowerCase() || '';
-      return { flightNumber, origin, scheduledTime, status };
-    });
-  });
-
-  await browser.close();
-
-  const now = new Date();
-  const threeHoursLater = new Date(now.getTime() + 3 * 60 * 60 * 1000);
-
-  const divertedFlights = flightsData.filter(f => f.status.includes('diverted'));
-
-  const arrivalStatuses = ['expected', 'scheduled', 'on time', 'due'];
-  const upcomingFlights = flightsData.filter(f => {
-    if (!arrivalStatuses.some(s => f.status.includes(s))) return false;
-    const flightDate = parseTimeToDate(f.scheduledTime);
-    return flightDate >= now && flightDate <= threeHoursLater;
-  });
-
-  let report = '';
-
-  if (divertedFlights.length > 0) {
-    report += '*🚨 Diverted Flights:*\n';
-    divertedFlights.forEach(f => {
-      report += `• ${f.flightNumber} from ${f.origin} at ${f.scheduledTime}\n`;
-    });
-  } else {
-    report += 'No diverted flights.\n';
-  }
-
-  if (upcomingFlights.length > 0) {
-    report += '\n*Upcoming arrivals (next 3 hours):*\n';
-    upcomingFlights.forEach(f => {
-      report += `• ${f.flightNumber} from ${f.origin} at ${f.scheduledTime} — ${f.status}\n`;
-    });
-  } else {
-    report += '\nNo upcoming arrivals in next 3 hours.';
-  }
-
-  return report;
-}
-
-async function listenForMessages(offset = 0) {
-  const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getUpdates?timeout=60&offset=${offset}`;
   try {
-    const res = await fetch(url);
+    const res = await fetch(url, { headers });
+    if (!res.ok) throw new Error(`Error API: ${res.status}`);
+
     const data = await res.json();
 
-    if (data.result && data.result.length > 0) {
-      for (const update of data.result) {
-        const updateId = update.update_id;
-        const message = update.message;
+    // Filtrar vuelos desviados
+    const divertedFlights = data.filter(f => f.status.toLowerCase().includes('diverted'));
 
-        if (message && message.text) {
-          const chatId = message.chat.id;
-          const text = message.text.toLowerCase();
-
-          if (text === '/flights' || text === '/check' || text === '/status') {
-            await sendTelegramMessage(chatId, 'Checking flights, please wait...');
-            try {
-              const report = await getFlightsReport();
-              await sendTelegramMessage(chatId, report);
-            } catch (err) {
-              console.error('Error fetching flights:', err);
-              await sendTelegramMessage(chatId, 'Error fetching flights data.');
-            }
-          } else {
-            await sendTelegramMessage(chatId, 'Send /flights to get the latest flight info.');
-          }
-
-          offset = updateId + 1;
-        }
-      }
-    }
-  } catch (error) {
-    console.error('Error fetching updates:', error);
+    return divertedFlights;
+  } catch (err) {
+    console.error('Error fetching flights:', err);
+    return null;
   }
-  setTimeout(() => listenForMessages(offset), 1000);
 }
 
-(async () => {
-  listenForMessages();
-})();
+// Función para enviar mensaje si hay vuelos desviados
+async function checkAndNotify() {
+  const diverted = await getFlightsToBHX();
+  if (!diverted) {
+    await bot.telegram.sendMessage(CHAT_ID, 'Error fetching flights data.');
+    return;
+  }
+
+  if (diverted.length === 0) {
+    console.log('No diverted flights detected.');
+    return;
+  }
+
+  let msg = '*Alert: Diverted flights to Birmingham Airport detected:*\n';
+  diverted.forEach(f => {
+    msg += `• Flight ${f.flightNumber} from ${f.departure?.iata} scheduled at ${f.scheduledTimeLocal}\n`;
+  });
+
+  await bot.telegram.sendMessage(CHAT_ID, msg, { parse_mode: 'Markdown' });
+  console.log('Notification sent.');
+}
+
+// Comando /start para verificar bot activo
+bot.start((ctx) => ctx.reply('Bot BHXAlerts activo. Usa /check para revisar vuelos desviados.'));
+
+// Comando /check para forzar chequeo manual
+bot.command('check', async (ctx) => {
+  ctx.reply('Checking for diverted flights, please wait...');
+  await checkAndNotify();
+});
+
+// Chequeo automático cada 15 minutos
+setInterval(checkAndNotify, 15 * 60 * 1000);
+
+bot.launch();
+
+console.log('Bot BHXAlerts running...');
