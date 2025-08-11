@@ -1,77 +1,52 @@
-const fetch = require('node-fetch');
 const { Telegraf } = require('telegraf');
+const fetch = require('node-fetch');
 
-const TELEGRAM_BOT_TOKEN = '8369195868:AAGxoIVt8pCMO4qdRIor6fDEmlBlGqkgwzo'; // Tu token Telegram
-const CHAT_ID = 1282174548; // Tu chat ID
-
-const AERODATABOX_CLIENT_ID = 'b88008800@gmail.com-api-client';
-const AERODATABOX_CLIENT_SECRET = 'C8RLV81IuttFvdAK5vJHpBWlCnWnqfBZ';
+const TELEGRAM_BOT_TOKEN = '8369195868:AAGxoIVt8pCMO4qdRIor6fDEmlBlGqkgwzo';
+const CHAT_ID = '1282174548'; // Tu chat ID para mensajes directos
 
 const bot = new Telegraf(TELEGRAM_BOT_TOKEN);
 
-// Función para obtener vuelos a BHX en las próximas 3 horas
-async function getFlightsToBHX() {
-  const now = new Date();
-  const offsetMinutes = 0; // Ajusta según zona horaria si quieres
-  const durationMinutes = 180; // 3 horas
-
-  const url = `https://aerodatabox.p.rapidapi.com/flights/airports/iata/BHX?offsetMinutes=${offsetMinutes}&durationMinutes=${durationMinutes}&withLeg=true&direction=Arrival`;
-
-  const headers = {
-    'x-rapidapi-host': 'aerodatabox.p.rapidapi.com',
-    'x-rapidapi-key': AERODATABOX_CLIENT_SECRET, // Usar API key aquí, el clientSecret parece el API key en tu caso
-  };
-
+async function getFlights() {
   try {
-    const res = await fetch(url, { headers });
-    if (!res.ok) throw new Error(`Error API: ${res.status}`);
+    // Aquí puedes poner la llamada a una API real o simular datos
+    // Ejemplo simple simulando vuelos desviados a BHX:
+    // (Lo ideal es que conectes a una API real que tengas acceso)
+    const divertedFlights = [
+      { flightNumber: 'AB123', origin: 'Madrid', scheduledTime: '15:30' },
+      { flightNumber: 'CD456', origin: 'Paris', scheduledTime: '16:10' }
+    ];
 
-    const data = await res.json();
+    if (divertedFlights.length === 0) return 'No hay vuelos desviados a Birmingham en este momento.';
 
-    // Filtrar vuelos desviados
-    const divertedFlights = data.filter(f => f.status.toLowerCase().includes('diverted'));
+    let message = '*Vuelos desviados a Birmingham (BHX):*\n';
+    divertedFlights.forEach(flight => {
+      message += `• ${flight.flightNumber} desde ${flight.origin} a las ${flight.scheduledTime}\n`;
+    });
+    return message;
 
-    return divertedFlights;
-  } catch (err) {
-    console.error('Error fetching flights:', err);
-    return null;
+  } catch (error) {
+    console.error('Error fetching flights:', error);
+    return 'Error obteniendo datos de vuelos.';
   }
 }
 
-// Función para enviar mensaje si hay vuelos desviados
-async function checkAndNotify() {
-  const diverted = await getFlightsToBHX();
-  if (!diverted) {
-    await bot.telegram.sendMessage(CHAT_ID, 'Error fetching flights data.');
-    return;
-  }
+bot.start((ctx) => ctx.reply('Bienvenido a BHXalerts Bot! Escribe /flights para ver vuelos desviados a Birmingham.'));
 
-  if (diverted.length === 0) {
-    console.log('No diverted flights detected.');
-    return;
-  }
-
-  let msg = '*Alert: Diverted flights to Birmingham Airport detected:*\n';
-  diverted.forEach(f => {
-    msg += `• Flight ${f.flightNumber} from ${f.departure?.iata} scheduled at ${f.scheduledTimeLocal}\n`;
-  });
-
-  await bot.telegram.sendMessage(CHAT_ID, msg, { parse_mode: 'Markdown' });
-  console.log('Notification sent.');
-}
-
-// Comando /start para verificar bot activo
-bot.start((ctx) => ctx.reply('Bot BHXAlerts activo. Usa /check para revisar vuelos desviados.'));
-
-// Comando /check para forzar chequeo manual
-bot.command('check', async (ctx) => {
-  ctx.reply('Checking for diverted flights, please wait...');
-  await checkAndNotify();
+bot.command('flights', async (ctx) => {
+  await ctx.reply('Consultando vuelos desviados a Birmingham, por favor espera...');
+  const flightsMessage = await getFlights();
+  ctx.reply(flightsMessage, { parse_mode: 'Markdown' });
 });
 
-// Chequeo automático cada 15 minutos
-setInterval(checkAndNotify, 15 * 60 * 1000);
+// Opcional: responde si el bot está activo
+bot.command('status', (ctx) => {
+  ctx.reply('BHXalerts está activo y funcionando.');
+});
 
-bot.launch();
+bot.launch().then(() => {
+  console.log('BHXalerts Bot iniciado');
+});
 
-console.log('Bot BHXAlerts running...');
+// Para cerrar el bot con Ctrl+C o señal de terminación
+process.once('SIGINT', () => bot.stop('SIGINT'));
+process.once('SIGTERM', () => bot.stop('SIGTERM'));
