@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "puppeteer": "^24.9.0",
-    "node-fetch": "^2.6.7"
+    "node-fetch": "^2.6.7",
+    "telegraf": "^4.12.0"
   }
 }
