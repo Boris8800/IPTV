@@ -1,17 +1,23 @@
 {
   "name": "BHXalerts",
   "version": "1.0.0",
-  "description": "Telegram bot para alertas de vuelos a Birmingham",
+  "description": "Telegram bot to alert diverted flights to Birmingham Airport",
   "main": "index.js",
+  "type": "module",
   "scripts": {
     "start": "node index.js"
   },
+  "keywords": [
+    "telegram",
+    "bot",
+    "flights",
+    "Birmingham",
+    "alerts"
+  ],
+  "author": "Tu Nombre",
+  "license": "MIT",
   "dependencies": {
-    "node-fetch": "^2.6.7",
-    "telegraf": "^4.12.2",
-    "puppeteer": "^24.9.0"
-  },
-  "engines": {
-    "node": ">=16"
+    "node-fetch": "^3.3.1",
+    "telegraf": "^4.12.2"
   }
 }
