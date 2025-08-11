@@ -8,11 +8,12 @@ async function sendTelegramMessage(chat_id, text) {
   const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
   const res = await fetch(url, {
     method: 'POST',
-    headers: {'Content-Type': 'application/json'},
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       chat_id,
       text,
-      parse_mode: 'Markdown'
+      parse_mode: 'Markdown',
+      disable_web_page_preview: true,
     }),
   });
 
@@ -22,46 +23,18 @@ async function sendTelegramMessage(chat_id, text) {
   console.log(`Telegram message sent to ${chat_id}:`, text);
 }
 
-async function listenForMessages(offset = 0) {
-  const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getUpdates?timeout=60&offset=${offset}`;
-  try {
-    const res = await fetch(url);
-    const data = await res.json();
-
-    if (data.result && data.result.length > 0) {
-      for (const update of data.result) {
-        const updateId = update.update_id;
-        const message = update.message;
-
-        if (message && message.text) {
-          const chatId = message.chat.id;
-
-          await sendTelegramMessage(chatId, 'Bot is running and connected!');
-
-          offset = updateId + 1;
-        }
-      }
-    }
-  } catch (error) {
-    console.error('Error fetching updates:', error);
-  }
-  setTimeout(() => listenForMessages(offset), 1000);
-}
-
 function parseTimeToDate(timeStr) {
-  // timeStr expected format: "14:30"
   const now = new Date();
   const [hours, minutes] = timeStr.split(':').map(Number);
   const flightDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes);
-  // If time has already passed today, assume it's for tomorrow
   if (flightDate < now) flightDate.setDate(flightDate.getDate() + 1);
   return flightDate;
 }
 
-async function checkFlights() {
+async function getFlightsReport() {
   const browser = await puppeteer.launch({
     headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox']
+    args: ['--no-sandbox', '--disable-setuid-sandbox'],
   });
   const page = await browser.newPage();
 
@@ -84,10 +57,8 @@ async function checkFlights() {
   const now = new Date();
   const threeHoursLater = new Date(now.getTime() + 3 * 60 * 60 * 1000);
 
-  // Filtrar vuelos desviados
   const divertedFlights = flightsData.filter(f => f.status.includes('diverted'));
 
-  // Filtrar vuelos próximos dentro de 3 horas con status que indica llegada próxima (puede ser "expected", "scheduled", "on time", etc.)
   const arrivalStatuses = ['expected', 'scheduled', 'on time', 'due'];
   const upcomingFlights = flightsData.filter(f => {
     if (!arrivalStatuses.some(s => f.status.includes(s))) return false;
@@ -95,29 +66,67 @@ async function checkFlights() {
     return flightDate >= now && flightDate <= threeHoursLater;
   });
 
-  // Enviar alertas
+  let report = '';
+
   if (divertedFlights.length > 0) {
-    for (const flight of divertedFlights) {
-      const message = `🚨 *Flight diverted*: ${flight.flightNumber} from ${flight.origin} scheduled at ${flight.scheduledTime}`;
-      await sendTelegramMessage(CHAT_ID, message);
-    }
+    report += '🚨 *Diverted Flights:*\n';
+    divertedFlights.forEach(f => {
+      report += `• ${f.flightNumber} from ${f.origin} at ${f.scheduledTime}\n`;
+    });
   } else {
-    console.log('No diverted flights found.');
+    report += 'No diverted flights.\n';
   }
 
   if (upcomingFlights.length > 0) {
-    let message = '*Upcoming arrivals in next 3 hours:*\n';
-    for (const flight of upcomingFlights) {
-      message += `• ${flight.flightNumber} from ${flight.origin} at ${flight.scheduledTime} — ${flight.status}\n`;
-    }
-    await sendTelegramMessage(CHAT_ID, message);
+    report += '\n*Upcoming arrivals (next 3 hours):*\n';
+    upcomingFlights.forEach(f => {
+      report += `• ${f.flightNumber} from ${f.origin} at ${f.scheduledTime} — ${f.status}\n`;
+    });
   } else {
-    console.log('No upcoming arrivals in next 3 hours.');
+    report += '\nNo upcoming arrivals in next 3 hours.';
   }
+
+  return report;
+}
+
+async function listenForMessages(offset = 0) {
+  const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getUpdates?timeout=60&offset=${offset}`;
+  try {
+    const res = await fetch(url);
+    const data = await res.json();
+
+    if (data.result && data.result.length > 0) {
+      for (const update of data.result) {
+        const updateId = update.update_id;
+        const message = update.message;
+
+        if (message && message.text) {
+          const chatId = message.chat.id;
+          const text = message.text.toLowerCase();
+
+          if (text === '/flights' || text === '/check' || text === '/status') {
+            await sendTelegramMessage(chatId, 'Checking flights, please wait...');
+            try {
+              const report = await getFlightsReport();
+              await sendTelegramMessage(chatId, report);
+            } catch (err) {
+              console.error('Error fetching flights:', err);
+              await sendTelegramMessage(chatId, 'Error fetching flights data.');
+            }
+          } else {
+            await sendTelegramMessage(chatId, 'Send /flights to get the latest flight info.');
+          }
+
+          offset = updateId + 1;
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error fetching updates:', error);
+  }
+  setTimeout(() => listenForMessages(offset), 1000);
 }
 
 (async () => {
   listenForMessages();
-  await checkFlights();
-  setInterval(checkFlights, 10 * 60 * 1000);
 })();
