@@ -2,51 +2,79 @@ const { Telegraf } = require('telegraf');
 const fetch = require('node-fetch');
 
 const TELEGRAM_BOT_TOKEN = '8369195868:AAGxoIVt8pCMO4qdRIor6fDEmlBlGqkgwzo';
-const CHAT_ID = '1282174548'; // Tu chat ID para mensajes directos
+
+// OpenSky API credenciales (clientId y clientSecret)
+const OPENSKY_USERNAME = 'b88008800@gmail.com-api-client';
+const OPENSKY_PASSWORD = 'C8RLV81IuttFvdAK5vJHpBWlCnWnqfBZ';
 
 const bot = new Telegraf(TELEGRAM_BOT_TOKEN);
 
-async function getFlights() {
+async function getFlightsToBHX() {
   try {
-    // Aquí puedes poner la llamada a una API real o simular datos
-    // Ejemplo simple simulando vuelos desviados a BHX:
-    // (Lo ideal es que conectes a una API real que tengas acceso)
-    const divertedFlights = [
-      { flightNumber: 'AB123', origin: 'Madrid', scheduledTime: '15:30' },
-      { flightNumber: 'CD456', origin: 'Paris', scheduledTime: '16:10' }
-    ];
+    // Endpoint OpenSky: vuelos en aire con destino BHX
+    // Nota: OpenSky usa ICAO para aeropuertos, BHX ICAO = EGBB
+    const url = 'https://opensky-network.org/api/flights/destination?airport=EGBB&begin=' + Math.floor(Date.now()/1000 - 3*3600) + '&end=' + Math.floor(Date.now()/1000);
 
-    if (divertedFlights.length === 0) return 'No hay vuelos desviados a Birmingham en este momento.';
-
-    let message = '*Vuelos desviados a Birmingham (BHX):*\n';
-    divertedFlights.forEach(flight => {
-      message += `• ${flight.flightNumber} desde ${flight.origin} a las ${flight.scheduledTime}\n`;
+    const res = await fetch(url, {
+      headers: {
+        'Authorization': 'Basic ' + Buffer.from(OPENSKY_USERNAME + ':' + OPENSKY_PASSWORD).toString('base64')
+      }
     });
+
+    if (!res.ok) {
+      throw new Error(`OpenSky API error: ${res.status}`);
+    }
+
+    const flights = await res.json();
+
+    if (!flights.length) return 'No hay vuelos con destino a Birmingham en las últimas 3 horas.';
+
+    // Buscamos vuelos desviados: si destination no es EGBB (BHX)
+    const divertedFlights = flights.filter(flight => flight.estArrivalAirport !== 'EGBB');
+
+    let message = '';
+
+    if (divertedFlights.length > 0) {
+      message += '*Vuelos desviados a Birmingham (BHX):*\n';
+      divertedFlights.forEach(f => {
+        message += `• Vuelo ${f.callsign || 'N/A'} de ${f.estDepartureAirport || 'N/A'} (programado llegada: ${new Date(f.lastSeen * 1000).toLocaleTimeString()})\n`;
+      });
+    } else {
+      message += 'No hay vuelos desviados a Birmingham en las últimas 3 horas.\n';
+    }
+
+    // También mostramos vuelos próximos a aterrizar (en tiempo real)
+    const upcomingFlights = flights.filter(f => f.estArrivalAirport === 'EGBB');
+    if (upcomingFlights.length > 0) {
+      message += '\n*Vuelos con destino a Birmingham en las últimas 3 horas:*\n';
+      upcomingFlights.forEach(f => {
+        message += `• Vuelo ${f.callsign || 'N/A'} de ${f.estDepartureAirport || 'N/A'} (estimado llegada: ${new Date(f.lastSeen * 1000).toLocaleTimeString()})\n`;
+      });
+    }
+
     return message;
 
   } catch (error) {
-    console.error('Error fetching flights:', error);
-    return 'Error obteniendo datos de vuelos.';
+    console.error('Error fetching OpenSky flights:', error);
+    return 'Error obteniendo datos de vuelos desde OpenSky.';
   }
 }
 
 bot.start((ctx) => ctx.reply('Bienvenido a BHXalerts Bot! Escribe /flights para ver vuelos desviados a Birmingham.'));
 
 bot.command('flights', async (ctx) => {
-  await ctx.reply('Consultando vuelos desviados a Birmingham, por favor espera...');
-  const flightsMessage = await getFlights();
-  ctx.reply(flightsMessage, { parse_mode: 'Markdown' });
+  await ctx.reply('Consultando vuelos a Birmingham, por favor espera...');
+  const report = await getFlightsToBHX();
+  ctx.reply(report, { parse_mode: 'Markdown' });
 });
 
-// Opcional: responde si el bot está activo
 bot.command('status', (ctx) => {
   ctx.reply('BHXalerts está activo y funcionando.');
 });
 
 bot.launch().then(() => {
-  console.log('BHXalerts Bot iniciado');
+  console.log('BHXalerts Bot iniciado con OpenSky API');
 });
 
-// Para cerrar el bot con Ctrl+C o señal de terminación
 process.once('SIGINT', () => bot.stop('SIGINT'));
 process.once('SIGTERM', () => bot.stop('SIGTERM'));
