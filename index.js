@@ -1,69 +1,101 @@
-const fetch = require('node-fetch');
-const { Telegraf } = require('telegraf');
+import { Telegraf } from "telegraf";
+import puppeteer from "puppeteer";
 
 const TELEGRAM_BOT_TOKEN = '8369195868:AAGxoIVt8pCMO4qdRIor6fDEmlBlGqkgwzo';
-const CHAT_ID = '1282174548'; // tu chat id
+const CHAT_ID = '1282174548';
+
+const BHX_ARRIVALS_URL = "https://www.flightstats.com/v2/flight-tracker/arrivals/BHX";
 
 const bot = new Telegraf(TELEGRAM_BOT_TOKEN);
 
-async function getDivertedFlights() {
-  // Ejemplo con OpenSky API para vuelos que llegan a BHX en las próximas 3 horas
-  const now = Math.floor(Date.now() / 1000);
-  const threeHoursLater = now + 3 * 3600;
-
-  // Cambia URL y filtro según API que uses (esto es solo ejemplo)
-  const url = `https://opensky-network.org/api/flights/arrival?airport=BHX&begin=${now}&end=${threeHoursLater}`;
-
-  try {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`OpenSky response status: ${res.status}`);
-    const flights = await res.json();
-
-    // Filtrar vuelos desviados (según datos disponibles en la API)
-    // Suponiendo que un vuelo desviado tenga algo en la propiedad "diverted" o "status"
-    // Aquí no hay campo directo, tendrás que ajustar según tu fuente de datos
-
-    // Por ejemplo, filtrar vuelos con estatus "diverted" o similares:
-    const diverted = flights.filter(f => f.diverted === true);
-
-    return diverted;
-  } catch (e) {
-    console.error('Error fetching diverted flights:', e);
-    return null;
+function parseTimeToDate(timeStr) {
+  const [hours, minutes] = timeStr.split(":").map(Number);
+  const now = new Date();
+  let date = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes);
+  if (date < now) {
+    date.setDate(date.getDate() + 1);
   }
+  return date;
 }
 
-async function checkAndAlert() {
-  const divertedFlights = await getDivertedFlights();
+async function scrapeArrivals() {
+  const browser = await puppeteer.launch({
+    headless: true,
+    args: ["--no-sandbox", "--disable-setuid-sandbox"],
+  });
+  const page = await browser.newPage();
+  await page.goto(BHX_ARRIVALS_URL, { waitUntil: "networkidle2" });
 
-  if (divertedFlights === null) {
-    await bot.telegram.sendMessage(CHAT_ID, 'Error fetching flights data.');
-    return;
-  }
-
-  if (divertedFlights.length === 0) {
-    console.log('No diverted flights right now.');
-    return; // No avisar si no hay vuelos desviados
-  }
-
-  let message = '**Vuelos desviados a Birmingham (BHX):**\n';
-  divertedFlights.forEach(f => {
-    message += `• ${f.callsign || 'N/A'} desde ${f.origin_airport || 'N/A'} a las ${new Date(f.last_seen * 1000).toLocaleTimeString()}\n`;
+  const flights = await page.evaluate(() => {
+    const rows = [...document.querySelectorAll(".ticket-flight .ticket")];
+    return rows.map(row => {
+      const flightNumber = row.querySelector(".ticket-flight-number")?.textContent.trim() || "";
+      const origin = row.querySelector(".ticket-airport")?.textContent.trim() || "";
+      const scheduledTime = row.querySelector(".ticket-time")?.textContent.trim() || "";
+      const status = row.querySelector(".ticket-status")?.textContent.trim() || "";
+      return { flightNumber, origin, scheduledTime, status };
+    });
   });
 
-  await bot.telegram.sendMessage(CHAT_ID, message, { parse_mode: 'Markdown' });
+  await browser.close();
+  return flights;
 }
 
-bot.start((ctx) => ctx.reply('Bot BHXalerts activo. Escribe /check para consultar vuelos desviados a Birmingham.'));
+function filterNext6HoursFlights(flights) {
+  const now = new Date();
+  const sixHoursLater = new Date(now.getTime() + 6 * 60 * 60 * 1000);
+  return flights.filter(flight => {
+    const arrivalDate = parseTimeToDate(flight.scheduledTime);
+    return arrivalDate >= now && arrivalDate <= sixHoursLater;
+  });
+}
 
-bot.command('check', async (ctx) => {
-  await ctx.reply('Comprobando vuelos desviados, espera...');
-  await checkAndAlert();
-});
+function filterDivertedFlights(flights) {
+  return flights.filter(flight => flight.status.toLowerCase().includes("diverted"));
+}
+
+async function sendFlightsSummary(ctx) {
+  try {
+    const flights = await scrapeArrivals();
+    const upcomingFlights = filterNext6HoursFlights(flights);
+
+    let message = `🛬 *Upcoming arrivals at Birmingham (next 6 hours):*\n`;
+    if (upcomingFlights.length === 0) {
+      message += "No arrivals in the next 6 hours.";
+    } else {
+      upcomingFlights.forEach(flight => {
+        message += `• ${flight.flightNumber} from ${flight.origin} at ${flight.scheduledTime} — Status: ${flight.status}\n`;
+      });
+    }
+
+    await ctx.replyWithMarkdown(message);
+  } catch (error) {
+    await ctx.reply("Error fetching flight data. Please try again later.");
+    console.error(error);
+  }
+}
+
+async function checkDivertedFlightsAndAlert() {
+  try {
+    const flights = await scrapeArrivals();
+    const divertedFlights = filterDivertedFlights(flights);
+    if (divertedFlights.length === 0) return; // No alert if no diverted flights
+
+    let alertMsg = `🛑 *Diverted flights to Birmingham:*\n`;
+    divertedFlights.forEach(flight => {
+      alertMsg += `• ${flight.flightNumber} from ${flight.origin} — Status: ${flight.status}\n`;
+    });
+
+    await bot.telegram.sendMessage(CHAT_ID, alertMsg, { parse_mode: "Markdown" });
+  } catch (error) {
+    console.error("Error checking diverted flights:", error);
+  }
+}
+
+bot.start(ctx => ctx.reply("Welcome! Use /flights to get arrivals at Birmingham Airport in the next 6 hours."));
+bot.command("flights", sendFlightsSummary);
+
+setInterval(checkDivertedFlightsAndAlert, 10 * 60 * 1000); // check cada 10 minutos
 
 bot.launch();
-
-console.log('Bot BHXalerts started');
-
-// Ejecutar checkAndAlert cada 10 minutos:
-setInterval(checkAndAlert, 10 * 60 * 1000);
+console.log("Bot BHXalerts started");
