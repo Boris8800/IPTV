@@ -1,15 +1,15 @@
 {
-  "name": "flight-alert-bhx",
+  "name": "BHXalerts",
   "version": "1.0.0",
-  "description": "Telegram bot con Puppeteer para vuelos a Birmingham",
+  "description": "Telegram bot para alertas de vuelos a Birmingham Airport",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js",
-    "postinstall": "puppeteer install"
+    "start": "node index.js"
   },
+  "author": "",
+  "license": "ISC",
   "dependencies": {
-    "puppeteer": "^24.9.0",
-    "node-fetch": "^2.6.7",
-    "telegraf": "^4.12.0"
+    "telegraf": "^4.12.0",
+    "node-fetch": "^3.3.1"
   }
 }
