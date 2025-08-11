@@ -1,8 +1,8 @@
 import puppeteer from 'puppeteer';
 import { Telegraf } from 'telegraf';
 
-const TELEGRAM_BOT_TOKEN = 'TU_TOKEN';
-const CHAT_ID = 'TU_CHAT_ID';
+const TELEGRAM_BOT_TOKEN = '8369195868:AAGxoIVt8pCMO4qdRIor6fDEmlBlGqkgwzo';
+const CHAT_ID = '1282174548';
 
 const bot = new Telegraf(TELEGRAM_BOT_TOKEN);
 
@@ -17,10 +17,8 @@ async function scrapeBHXFlights() {
     waitUntil: 'networkidle2',
   });
 
-  // Esperar tabla de vuelos
-  await page.waitForSelector('table'); // Ajustar selector si necesario
+  await page.waitForSelector('table');
 
-  // Extraer vuelos en próximas 6 horas, buscar desviados
   const flights = await page.evaluate(() => {
     const rows = Array.from(document.querySelectorAll('table tbody tr'));
     const now = new Date();
@@ -35,10 +33,8 @@ async function scrapeBHXFlights() {
         status: cells[3]?.innerText.trim(),
       };
     }).filter(flight => {
-      // Aquí deberías parsear la hora y filtrar por vuelos en próximas 6 horas
-      // y también vuelos desviados (status que contenga "Diverted")
-      // Este filtro es básico:
-      return flight.status && (flight.status.toLowerCase().includes('diverted'));
+      // Filtrar vuelos desviados
+      return flight.status && flight.status.toLowerCase().includes('diverted');
     });
   });
 
@@ -63,12 +59,12 @@ async function checkAndNotify() {
 }
 
 bot.launch();
-console.log('Bot started');
+console.log('Bot BHXalerts started');
 
 // Ejecutar cada 10 minutos
 setInterval(checkAndNotify, 10 * 60 * 1000);
 
-// También podrías añadir comando Telegram para pedir resumen manual
+// Comando manual /flights para pedir resumen
 bot.command('flights', async (ctx) => {
   const flights = await scrapeBHXFlights();
   if (flights.length > 0) {
