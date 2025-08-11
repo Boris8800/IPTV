@@ -1,40 +1,120 @@
-import express from 'express';
 import { Telegraf } from 'telegraf';
 import puppeteer from 'puppeteer';
 
 const TELEGRAM_BOT_TOKEN = '8369195868:AAGxoIVt8pCMO4qdRIor6fDEmlBlGqkgwzo';
 const CHAT_ID = '1282174548';
 
-const bot = new Telegraf(TELEGRAM_BOT_TOKEN);
+const bot = new Telegraf(BOT_TOKEN);
 
-bot.start((ctx) => ctx.reply('BHXalerts bot started!'));
+let lastDivertedFlights = [];
 
-async function scrapeFlightStats() {
+async function scrapeFlights() {
   const browser = await puppeteer.launch({
-    headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox'] // Para que funcione en Render
+    args: ['--no-sandbox', '--disable-setuid-sandbox'],
   });
   const page = await browser.newPage();
+  await page.goto('https://www.flightstats.com/v2/flight-tracker/arrivals/BHX', {
+    waitUntil: 'networkidle2',
+  });
 
-  await page.goto('https://www.flightstats.com/v2/flight-tracker/arrivals/BHX', { waitUntil: 'networkidle2' });
+  // Scrape flights arrivals next 6h
+  // Flight data is inside table rows with class e.g. 'TableRow__StyledTableRow-sc-xyz'
+  // This selector depende de la web, puede cambiar: ajusta si no funciona
 
-  // Esperamos que cargue la tabla de arrivals (selector puede cambiar)
-  await page.waitForSelector('.ticket');
-
-  // Extraemos la info de vuelos
   const flights = await page.evaluate(() => {
-    const results = [];
-    const ticketElements = document.querySelectorAll('.ticket');
-
+    const rows = Array.from(document.querySelectorAll('table tbody tr'));
     const now = new Date();
     const sixHoursLater = new Date(now.getTime() + 6 * 60 * 60 * 1000);
 
-    for (let ticket of ticketElements) {
-      try {
-        const flightNumber = ticket.querySelector('.ticket-header .flight-number')?.textContent.trim() || '';
-        const origin = ticket.querySelector('.ticket-header .airport-name')?.textContent.trim() || '';
-        const estTimeStr = ticket.querySelector('.ticket-time .estimated-time')?.textContent.trim() || '';
+    return rows.map(row => {
+      const cells = row.querySelectorAll('td');
+      const flightNumber = cells[0]?.innerText.trim();
+      const origin = cells[1]?.innerText.trim();
+      const scheduledTimeText = cells[2]?.innerText.trim();
+      const status = cells[4]?.innerText.trim().toLowerCase();
 
+      // Parse scheduledTimeText to Date object for today
+      let [hour, minute] = scheduledTimeText.split(':').map(Number);
+      let flightTime = new Date(now);
+      flightTime.setHours(hour, minute, 0, 0);
+
+      // If flight time is before now, assume it's next day (after midnight)
+      if (flightTime < now) flightTime.setDate(flightTime.getDate() + 1);
+
+      return { flightNumber, origin, scheduledTimeText, flightTime, status };
+    }).filter(f => f.flightTime <= sixHoursLater);
+  });
+
+  await browser.close();
+  return flights;
+}
+
+function formatFlights(flights) {
+  if (flights.length === 0) return 'No flights found in the next 6 hours.';
+
+  return flights.map(f => 
+    `• ${f.flightNumber} from ${f.origin} at ${f.scheduledTimeText} (Status: ${f.status})`
+  ).join('\n');
+}
+
+async function checkDivertedFlights() {
+  const flights = await scrapeFlights();
+  const diverted = flights.filter(f => f.status.includes('diverted'));
+
+  // Filter new diverted flights compared to last check
+  const newDiverted = diverted.filter(f => 
+    !lastDivertedFlights.some(ldf => ldf.flightNumber === f.flightNumber)
+  );
+  lastDivertedFlights = diverted;
+  return newDiverted;
+}
+
+async function notifyDivertedFlights() {
+  const newDiverted = await checkDivertedFlights();
+  if (newDiverted.length > 0) {
+    const message = `⚠️ Diverted flights to Birmingham detected:\n` + formatFlights(newDiverted);
+    await bot.telegram.sendMessage(CHAT_ID, message);
+  }
+}
+
+bot.start((ctx) => ctx.reply('Welcome to BHXalerts bot! Use /flights for arrivals and /diverted for diverted flights.'));
+
+bot.command('flights', async (ctx) => {
+  await ctx.reply('Fetching arrivals to Birmingham for next 6 hours, please wait...');
+  try {
+    const flights = await scrapeFlights();
+    await ctx.reply(formatFlights(flights));
+  } catch (e) {
+    await ctx.reply('Error fetching flight data. Please try again later.');
+  }
+});
+
+bot.command('diverted', async (ctx) => {
+  await ctx.reply('Checking diverted flights to Birmingham, please wait...');
+  try {
+    const diverted = await checkDivertedFlights();
+    if (diverted.length === 0) {
+      await ctx.reply('No diverted flights to Birmingham detected at this time.');
+    } else {
+      await ctx.reply(formatFlights(diverted));
+    }
+  } catch (e) {
+    await ctx.reply('Error fetching diverted flights data. Please try again later.');
+  }
+});
+
+bot.launch().then(() => {
+  console.log('Bot BHXalerts started');
+
+  // Notify diverted flights every 10 minutes
+  setInterval(() => {
+    notifyDivertedFlights().catch(console.error);
+  }, 10 * 60 * 1000);
+});
+
+// Graceful stop on termination signals
+process.once('SIGINT', () => bot.stop('SIGINT'));
+process.once('SIGTERM', () => bot.stop('SIGTERM'));
         // Convertir estTimeStr (ejemplo "3:30 PM") a objeto Date para comparar
         // FlightStats puede no dar fecha, solo hora, así que asumiremos hoy
 
