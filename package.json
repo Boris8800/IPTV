@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node index.js"
   },
-  "author": "YourName",
+  "author": "BDf",
   "license": "MIT",
   "dependencies": {
     "node-fetch": "^2.6.7",
