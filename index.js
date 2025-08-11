@@ -1,14 +1,16 @@
+import express from 'express';
 import { Telegraf } from 'telegraf';
-import puppeteer from 'puppeteer-core';  // puppeteer-core para usar Chrome instalado en Render
+import puppeteer from 'puppeteer-core';
 
 const TELEGRAM_BOT_TOKEN = '8369195868:AAGxoIVt8pCMO4qdRIor6fDEmlBlGqkgwzo';
 const CHAT_ID = '1282174548'; // tu chat id
 
 const bot = new Telegraf(TELEGRAM_BOT_TOKEN);
 
+// Lanzar Chrome en Render (ajusta ruta si hace falta)
 async function launchBrowser() {
   return await puppeteer.launch({
-    executablePath: process.env.CHROME_PATH || '/usr/bin/google-chrome-stable', // ruta de Chrome en Render
+    executablePath: process.env.CHROME_PATH || '/usr/bin/google-chrome-stable',
     args: ['--no-sandbox', '--disable-setuid-sandbox'],
   });
 }
@@ -21,15 +23,10 @@ async function scrapeArrivals() {
     waitUntil: 'networkidle2',
   });
 
-  // Espera selector principal de vuelos (ajusta según estructura real)
-  await page.waitForSelector('div.flight');
+  await page.waitForSelector('div.flight'); // ajusta si cambia el selector
 
-  // Extrae vuelos con desvíos y próximos 6h (ajusta los selectores a lo real)
   const flights = await page.evaluate(() => {
-    // Obtiene todos los elementos de vuelo
     const flightElements = Array.from(document.querySelectorAll('div.flight'));
-    
-    // Mapea a objetos y filtra vuelos próximos 6h
     const now = Date.now();
     const sixHoursMs = 6 * 60 * 60 * 1000;
 
@@ -39,19 +36,16 @@ async function scrapeArrivals() {
       const status = el.querySelector('.status')?.innerText.trim() || '';
       const diverted = status.toLowerCase().includes('diverted');
 
-      // Parsear hora programada (ejemplo: "15:30")
       const [hours, minutes] = scheduledTimeText.split(':').map(Number);
       const flightDate = new Date();
       flightDate.setHours(hours, minutes, 0, 0);
       const timeDiff = flightDate.getTime() - now;
 
       return { flightNumber, scheduledTimeText, status, diverted, timeDiff };
-    })
-    .filter(f => f.timeDiff >= 0 && f.timeDiff <= sixHoursMs);
+    }).filter(f => f.timeDiff >= 0 && f.timeDiff <= sixHoursMs);
   });
 
   await browser.close();
-
   return flights;
 }
 
@@ -88,6 +82,7 @@ async function checkFlightsAndNotify() {
   }
 }
 
+// Comando /flights manual
 bot.command('flights', async (ctx) => {
   await ctx.reply('Checking arrivals at BHX for next 6 hours...');
   await checkFlightsAndNotify();
@@ -98,3 +93,9 @@ console.log('Bot BHXalerts started');
 
 // Ejecutar revisión cada 10 minutos
 setInterval(checkFlightsAndNotify, 10 * 60 * 1000);
+
+// EXPRESS para mantener puerto abierto en Render
+const app = express();
+const PORT = process.env.PORT || 3000;
+app.get('/', (req, res) => res.send('Bot BHXalerts running'));
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
