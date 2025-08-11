@@ -1,14 +1,12 @@
 {
-  "name": "flightalerts",
+  "name": "flight-alert-bhx",
   "version": "1.0.0",
-  "main": "server.js",
+  "main": "index.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node index.js"
   },
   "dependencies": {
-    "express": "^4.18.2",
-    "puppeteer": "^20.9.0",
-    "nodemailer": "^6.9.3",
-    "cors": "^2.8.5"
+    "node-fetch": "^2.6.7",
+    "puppeteer": "^20.9.0"
   }
 }
