@@ -1,8 +1,8 @@
 const puppeteer = require('puppeteer');
 const fetch = require('node-fetch');
 
-const TELEGRAM_BOT_TOKEN = '8369195868:AAGxoIVt8pCMO4qdRIor6fDEmlBlGqkgwzo'; // Pon tu token real
-const CHAT_ID = '1282174548'; // Pon tu chat ID real
+const TELEGRAM_BOT_TOKEN = '8369195868:AAGxoIVt8pCMO4qdRIor6fDEmlBlGqkgwzo';
+const CHAT_ID = '1282174548';
 
 async function sendTelegramMessage(chat_id, text) {
   const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
@@ -32,11 +32,14 @@ function parseTimeToDate(timeStr) {
 }
 
 async function getFlightsReport() {
+  console.log('Chromium path:', puppeteer.executablePath());
+
   const browser = await puppeteer.launch({
     headless: true,
     args: ['--no-sandbox', '--disable-setuid-sandbox'],
     executablePath: puppeteer.executablePath(),
   });
+
   const page = await browser.newPage();
 
   await page.goto('https://www.birminghamairport.co.uk/flights/arrivals/', { waitUntil: 'networkidle2' });
@@ -70,7 +73,7 @@ async function getFlightsReport() {
   let report = '';
 
   if (divertedFlights.length > 0) {
-    report += '*Diverted Flights:*\n';
+    report += '*🚨 Diverted Flights:*\n';
     divertedFlights.forEach(f => {
       report += `• ${f.flightNumber} from ${f.origin} at ${f.scheduledTime}\n`;
     });
