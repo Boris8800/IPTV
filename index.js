@@ -1,29 +1,49 @@
+const puppeteer = require('puppeteer');
+const fetch = require('node-fetch');
+
+const TELEGRAM_BOT_TOKEN = '8369195868:AAGxoIVt8pCMO4qdRIor6fDEmlBlGqkgwzo'; // Pon tu token real
+const CHAT_ID = '1282174548'; // Pon tu chat ID real
+
+async function sendTelegramMessage(chat_id, text) {
+  const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      chat_id,
+      text,
+      parse_mode: 'Markdown',
+      disable_web_page_preview: true,
+    }),
+  });
+
+  if (!res.ok) {
+    throw new Error('Error sending Telegram message');
+  }
+  console.log(`Telegram message sent to ${chat_id}:`, text);
+}
+
+function parseTimeToDate(timeStr) {
+  const now = new Date();
+  const [hours, minutes] = timeStr.split(':').map(Number);
+  const flightDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes);
+  if (flightDate < now) flightDate.setDate(flightDate.getDate() + 1);
+  return flightDate;
+}
+
 async function getFlightsReport() {
   const browser = await puppeteer.launch({
     headless: true,
     args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    executablePath: puppeteer.executablePath(),
   });
   const page = await browser.newPage();
 
-  // Cambiar user agent para parecer un navegador normal
-  await page.setUserAgent(
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) ' +
-    'AppleWebKit/537.36 (KHTML, like Gecko) ' +
-    'Chrome/115.0.0.0 Safari/537.36'
-  );
-
-  console.log('Navegando a arrivals page...');
   await page.goto('https://www.birminghamairport.co.uk/flights/arrivals/', { waitUntil: 'networkidle2' });
-
-  try {
-    await page.waitForSelector('.flights__row', { timeout: 10000 });
-  } catch {
-    console.log('Selector .flights__row no encontrado, puede que la página haya cambiado.');
-  }
+  await page.waitForTimeout(5000);
 
   const flightsData = await page.evaluate(() => {
     const rows = Array.from(document.querySelectorAll('.flights__row'));
-    console.log('Filas encontradas:', rows.length);
     return rows.map(row => {
       const flightNumber = row.querySelector('.flights__flight-number')?.innerText.trim() || 'N/A';
       const origin = row.querySelector('.flights__origin')?.innerText.trim() || 'N/A';
@@ -32,8 +52,6 @@ async function getFlightsReport() {
       return { flightNumber, origin, scheduledTime, status };
     });
   });
-
-  console.log('Vuelos scrapeados:', flightsData.length);
 
   await browser.close();
 
@@ -52,7 +70,7 @@ async function getFlightsReport() {
   let report = '';
 
   if (divertedFlights.length > 0) {
-    report += '🚨 *Diverted Flights:*\n';
+    report += '*Diverted Flights:*\n';
     divertedFlights.forEach(f => {
       report += `• ${f.flightNumber} from ${f.origin} at ${f.scheduledTime}\n`;
     });
@@ -71,3 +89,45 @@ async function getFlightsReport() {
 
   return report;
 }
+
+async function listenForMessages(offset = 0) {
+  const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getUpdates?timeout=60&offset=${offset}`;
+  try {
+    const res = await fetch(url);
+    const data = await res.json();
+
+    if (data.result && data.result.length > 0) {
+      for (const update of data.result) {
+        const updateId = update.update_id;
+        const message = update.message;
+
+        if (message && message.text) {
+          const chatId = message.chat.id;
+          const text = message.text.toLowerCase();
+
+          if (text === '/flights' || text === '/check' || text === '/status') {
+            await sendTelegramMessage(chatId, 'Checking flights, please wait...');
+            try {
+              const report = await getFlightsReport();
+              await sendTelegramMessage(chatId, report);
+            } catch (err) {
+              console.error('Error fetching flights:', err);
+              await sendTelegramMessage(chatId, 'Error fetching flights data.');
+            }
+          } else {
+            await sendTelegramMessage(chatId, 'Send /flights to get the latest flight info.');
+          }
+
+          offset = updateId + 1;
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error fetching updates:', error);
+  }
+  setTimeout(() => listenForMessages(offset), 1000);
+}
+
+(async () => {
+  listenForMessages();
+})();
