@@ -1,19 +1,20 @@
 {
   "name": "BHXalerts",
   "version": "1.0.0",
-  "description": "Telegram bot to alert diverted flights to Birmingham",
+  "description": "Telegram bot para alertas de vuelos desviados a Birmingham",
   "main": "index.js",
   "type": "module",
   "scripts": {
     "start": "node index.js"
   },
+  "author": "Tu Nombre",
+  "license": "MIT",
   "dependencies": {
     "telegraf": "^4.12.2",
-    "puppeteer": "^24.9.0",
+    "puppeteer": "^21.3.8",
     "node-fetch": "^3.3.1"
   },
   "engines": {
     "node": ">=16"
-  },
-  "license": "MIT"
+  }
 }
