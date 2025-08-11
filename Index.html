@@ -1,1 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Flight Diversions to Birmingham Airport</title>
+<style>
+  body { font-family: Arial, sans-serif; margin: 20px; background: #f4f4f4; }
+  h1 { color: #003366; }
+  #status { margin-bottom: 15px; }
+  ul { list-style: none; padding: 0; }
+  li { background: #fff; margin-bottom: 10px; padding: 10px; border-radius: 5px; box-shadow: 0 0 5px rgba(0,0,0,0.1);}
+</style>
+</head>
+<body>
+<h1>Flights Diverted to Birmingham Airport (BHX)</h1>
+<div id="status">Loading data...</div>
+<ul id="flightsList"></ul>
 
+<script>
+  const EGBB_ICAO = 'EGBB';
+  const corsProxy = 'https://cors-anywhere.herokuapp.com/';
+  const apiUrl = `https://opensky-network.org/api/flights/arrival?airport=${EGBB_ICAO}&begin=${Math.floor(Date.now()/1000) - 3600}&end=${Math.floor(Date.now()/1000)}`;
+
+  async function fetchFlights() {
+    document.getElementById('status').textContent = 'Fetching flight data...';
+    try {
+      const response = await fetch(corsProxy + apiUrl);
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      const flights = await response.json();
+      displayDivertedFlights(flights);
+    } catch (err) {
+      document.getElementById('status').textContent = 'Error fetching data. Try again later.';
+      console.error('Fetch error:', err);
+    }
+  }
+
+  function displayDivertedFlights(flights) {
+    const list = document.getElementById('flightsList');
+    list.innerHTML = '';
+    const diverted = flights.filter(flight => 
+      flight.estArrivalAirport === EGBB_ICAO &&
+      flight.estDepartureAirport !== EGBB_ICAO
+    );
+
+    if (diverted.length === 0) {
+      document.getElementById('status').textContent = 'No diversions detected in the last hour.';
+      return;
+    }
+
+    document.getElementById('status').textContent = `Found ${diverted.length} flight(s) diverted to BHX in the last hour.`;
+
+    diverted.forEach(flight => {
+      const li = document.createElement('li');
+      const callsign = flight.callsign || 'N/A';
+      const from = flight.estDepartureAirport || 'N/A';
+      const arrivalTime = new Date(flight.lastSeen * 1000).toLocaleString();
+
+      li.innerHTML = `<strong>Flight:</strong> ${callsign}<br/>
+                      <strong>From:</strong> ${from}<br/>
+                      <strong>Arrival Time:</strong> ${arrivalTime}`;
+      list.appendChild(li);
+    });
+  }
+
+  fetchFlights();
+  // Refresh every 10 minutes
+  setInterval(fetchFlights, 10 * 60 * 1000);
+</script>
+</body>
+</html>
