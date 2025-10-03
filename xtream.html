@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IPTV Platform - Xtream Codes</title>
+    <title>Xtream Codes - IPTV Platform</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
             --primary: #3498db;
@@ -31,12 +32,13 @@
             background-color: var(--dark);
             color: var(--light);
             line-height: 1.6;
+            overflow-x: hidden;
         }
 
         .container {
             max-width: 1200px;
             margin: 0 auto;
-            padding: 20px;
+            padding: 0 20px;
         }
 
         header {
@@ -72,64 +74,9 @@
             color: transparent;
         }
 
-        .section {
-            background-color: rgba(255, 255, 255, 0.05);
-            border-radius: 8px;
-            padding: 25px;
-            margin-bottom: 30px;
-        }
-
-        .section-title {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 20px;
-            padding-bottom: 15px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .section-title h2 {
-            font-size: 22px;
-        }
-
-        .section-title i {
-            color: var(--primary);
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 500;
-        }
-
-        input[type="text"],
-        input[type="url"],
-        input[type="number"],
-        select {
-            width: 100%;
-            padding: 12px 15px;
-            border-radius: 4px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            background: rgba(255, 255, 255, 0.1);
-            color: var(--light);
-            font-size: 16px;
-            transition: var(--transition);
-        }
-
-        input:focus,
-        select:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
-        }
-
         .btn {
-            padding: 12px 20px;
-            border-radius: 4px;
+            padding: 10px 20px;
+            border-radius: 6px;
             font-weight: 600;
             cursor: pointer;
             transition: var(--transition);
@@ -137,6 +84,8 @@
             display: inline-flex;
             align-items: center;
             gap: 8px;
+            text-decoration: none;
+            font-size: 14px;
         }
 
         .btn-primary {
@@ -168,20 +117,72 @@
             background-color: #27ae60;
         }
 
-        .btn-block {
-            width: 100%;
-            justify-content: center;
+        .section {
+            background-color: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 25px;
+            margin-bottom: 30px;
+        }
+
+        .section-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .section-title h2 {
+            font-size: 22px;
+        }
+
+        .section-title i {
+            color: var(--primary);
         }
 
         .form-row {
             display: flex;
             gap: 15px;
-            margin-bottom: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
         }
 
-        .form-row .form-group {
+        .form-group {
             flex: 1;
-            margin-bottom: 0;
+            min-width: 200px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        input[type="text"],
+        input[type="url"],
+        input[type="password"],
+        select {
+            width: 100%;
+            padding: 12px 15px;
+            border-radius: 4px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--light);
+            font-size: 16px;
+            transition: var(--transition);
+        }
+
+        input:focus,
+        select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+        }
+
+        .btn-block {
+            width: 100%;
+            justify-content: center;
         }
 
         .status-message {
@@ -216,76 +217,61 @@
             display: none;
         }
 
-        .spinner {
-            border: 4px solid rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            border-top: 4px solid var(--primary);
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 20px auto;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .channels-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 15px;
-            margin-top: 20px;
-        }
-
-        .channel-card {
+        .server-info {
             background: rgba(255, 255, 255, 0.05);
             border-radius: 8px;
-            padding: 15px;
-            transition: var(--transition);
-            cursor: pointer;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-left: 4px solid var(--primary);
         }
 
-        .channel-card:hover {
-            background: rgba(255, 255, 255, 0.1);
-            transform: translateY(-2px);
+        .server-info h3 {
+            margin-bottom: 15px;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
-        .channel-logo {
-            width: 60px;
-            height: 60px;
-            border-radius: 8px;
-            object-fit: cover;
-            margin: 0 auto 10px;
-            display: block;
+        .server-info-content {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
         }
 
-        .channel-name {
-            font-size: 14px;
-            text-align: center;
-            margin-bottom: 5px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        .channel-category {
-            font-size: 12px;
+        .info-item:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            font-weight: 500;
             color: var(--gray);
-            text-align: center;
+        }
+
+        .info-value {
+            color: var(--light);
         }
 
         .tabs {
             display: flex;
             margin-bottom: 20px;
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            flex-wrap: wrap;
         }
 
         .tab {
-            padding: 10px 20px;
+            padding: 12px 24px;
             cursor: pointer;
             transition: var(--transition);
             border-bottom: 2px solid transparent;
+            font-weight: 500;
         }
 
         .tab.active {
@@ -301,30 +287,128 @@
             display: block;
         }
 
-        .server-info {
+        .channels-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .channel-card {
             background: rgba(255, 255, 255, 0.05);
             border-radius: 8px;
             padding: 15px;
-            margin-bottom: 20px;
+            transition: var(--transition);
+            cursor: pointer;
+            text-align: center;
         }
 
-        .server-info h3 {
-            margin-bottom: 10px;
-            color: var(--primary);
+        .channel-card:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
         }
 
-        .server-info p {
+        .channel-logo {
+            width: 60px;
+            height: 60px;
+            border-radius: 8px;
+            object-fit: cover;
+            margin: 0 auto 10px;
+            display: block;
+        }
+
+        .channel-name {
+            font-size: 14px;
             margin-bottom: 5px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .channel-category {
+            font-size: 12px;
+            color: var(--gray);
+        }
+
+        .categories-filter {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .category-tag {
+            padding: 6px 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .category-tag.active {
+            background: var(--primary);
+        }
+
+        .export-section {
+            text-align: center;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            margin-top: 30px;
+        }
+
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 4px solid var(--primary);
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: var(--gray);
+        }
+
+        .empty-state i {
+            font-size: 60px;
+            margin-bottom: 20px;
+            color: var(--primary);
         }
 
         @media (max-width: 768px) {
             .form-row {
                 flex-direction: column;
-                gap: 15px;
+            }
+            
+            .form-group {
+                min-width: auto;
+            }
+            
+            .tabs {
+                flex-direction: column;
+            }
+            
+            .tab {
+                text-align: center;
             }
             
             .channels-grid {
-                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+                grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            }
+            
+            .server-info-content {
+                grid-template-columns: 1fr;
             }
         }
     </style>
@@ -334,90 +418,108 @@
         <div class="container">
             <div class="header-content">
                 <div class="logo">
-                    <i class="fas fa-tv"></i>
-                    <h1>IPTV Platform - Xtream Codes</h1>
+                    <i class="fas fa-satellite-dish"></i>
+                    <h1>Xtream Codes IPTV</h1>
                 </div>
+                <a href="index.html" class="btn btn-outline">
+                    <i class="fas fa-arrow-left"></i> Back to Main
+                </a>
             </div>
         </div>
     </header>
 
     <div class="container">
+        <!-- Connection Section -->
         <div class="section">
             <div class="section-title">
                 <i class="fas fa-plug"></i>
-                <h2>Conexión Xtream Codes</h2>
+                <h2>Xtream Codes Connection</h2>
             </div>
 
             <div class="form-row">
                 <div class="form-group">
-                    <label for="serverUrl">URL del Servidor:</label>
-                    <input type="url" id="serverUrl" placeholder="http://tudominio.com:8080" required>
+                    <label for="serverUrl">Server URL:</label>
+                    <input type="url" id="serverUrl" placeholder="http://your-server.com:8080" required>
                 </div>
                 <div class="form-group">
-                    <label for="username">Usuario:</label>
-                    <input type="text" id="username" placeholder="Tu usuario" required>
+                    <label for="username">Username:</label>
+                    <input type="text" id="username" placeholder="Your username" required>
                 </div>
                 <div class="form-group">
-                    <label for="password">Contraseña:</label>
-                    <input type="text" id="password" placeholder="Tu contraseña" required>
+                    <label for="password">Password:</label>
+                    <input type="password" id="password" placeholder="Your password" required>
                 </div>
             </div>
 
-            <button class="btn btn-primary btn-block" id="connectBtn">
-                <i class="fas fa-link"></i> Conectar a Xtream Codes
-            </button>
+            <div class="form-row">
+                <button class="btn btn-primary btn-block" id="connectBtn">
+                    <i class="fas fa-link"></i> Connect to Xtream Codes
+                </button>
+            </div>
 
             <div id="connectionStatus"></div>
         </div>
 
+        <!-- Server Information -->
         <div class="section hidden" id="serverInfoSection">
             <div class="section-title">
                 <i class="fas fa-server"></i>
-                <h2>Información del Servidor</h2>
+                <h2>Server Information</h2>
             </div>
             <div id="serverInfo"></div>
         </div>
 
+        <!-- Content Tabs -->
         <div class="section hidden" id="contentSection">
-            <div class="tabs">
-                <div class="tab active" data-tab="live">Canales en Vivo</div>
-                <div class="tab" data-tab="series">Series</div>
-                <div class="tab" data-tab="movies">Películas</div>
+            <div class="section-title">
+                <i class="fas fa-tv"></i>
+                <h2>Content</h2>
             </div>
 
+            <div class="tabs">
+                <div class="tab active" data-tab="live">Live TV</div>
+                <div class="tab" data-tab="movies">Movies</div>
+                <div class="tab" data-tab="series">Series</div>
+            </div>
+
+            <!-- Live TV Tab -->
             <div class="tab-content active" id="liveTab">
-                <div class="form-group">
-                    <label for="categoryFilter">Filtrar por categoría:</label>
-                    <select id="categoryFilter">
-                        <option value="all">Todas las categorías</option>
-                    </select>
-                </div>
+                <div class="categories-filter" id="liveCategories"></div>
                 <div id="liveChannels" class="channels-grid"></div>
             </div>
 
-            <div class="tab-content" id="seriesTab">
-                <div id="seriesList" class="channels-grid"></div>
+            <!-- Movies Tab -->
+            <div class="tab-content" id="moviesTab">
+                <div class="categories-filter" id="movieCategories"></div>
+                <div id="moviesList" class="channels-grid"></div>
             </div>
 
-            <div class="tab-content" id="moviesTab">
-                <div id="moviesList" class="channels-grid"></div>
+            <!-- Series Tab -->
+            <div class="tab-content" id="seriesTab">
+                <div class="categories-filter" id="seriesCategories"></div>
+                <div id="seriesList" class="channels-grid"></div>
             </div>
         </div>
 
+        <!-- Export Section -->
         <div class="section">
             <div class="section-title">
                 <i class="fas fa-download"></i>
-                <h2>Exportar Lista M3U</h2>
+                <h2>Export & Tools</h2>
             </div>
-            <p>Genera un archivo M3U con todos los canales para usar en otros reproductores.</p>
-            <button class="btn btn-success" id="exportM3U">
-                <i class="fas fa-file-export"></i> Exportar Lista M3U
-            </button>
+
+            <div class="export-section">
+                <p>Export your Xtream Codes playlist to M3U format for use with other players</p>
+                <button class="btn btn-success" id="exportM3U">
+                    <i class="fas fa-file-export"></i> Export M3U Playlist
+                </button>
+            </div>
         </div>
     </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            // DOM Elements
             const serverUrl = document.getElementById('serverUrl');
             const username = document.getElementById('username');
             const password = document.getElementById('password');
@@ -426,90 +528,94 @@
             const serverInfoSection = document.getElementById('serverInfoSection');
             const serverInfo = document.getElementById('serverInfo');
             const contentSection = document.getElementById('contentSection');
-            const categoryFilter = document.getElementById('categoryFilter');
-            const liveChannels = document.getElementById('liveChannels');
-            const seriesList = document.getElementById('seriesList');
-            const moviesList = document.getElementById('moviesList');
             const exportM3U = document.getElementById('exportM3U');
             
+            // Tab elements
+            const tabs = document.querySelectorAll('.tab');
+            const tabContents = document.querySelectorAll('.tab-content');
+            
+            // Data storage
             let serverData = null;
-            let categories = [];
             let liveStreams = [];
-            let series = [];
             let movies = [];
+            let series = [];
+            let categories = {
+                live: [],
+                movies: [],
+                series: []
+            };
 
-            // Manejar conexión a Xtream Codes
+            // Event Listeners
             connectBtn.addEventListener('click', connectToXtream);
+            exportM3U.addEventListener('click', exportM3UPlaylist);
 
-            // Manejar cambio de pestañas
-            document.querySelectorAll('.tab').forEach(tab => {
+            // Tab switching
+            tabs.forEach(tab => {
                 tab.addEventListener('click', function() {
-                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-                    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                    // Update active tab
+                    tabs.forEach(t => t.classList.remove('active'));
+                    tabContents.forEach(c => c.classList.remove('active'));
                     
                     this.classList.add('active');
                     document.getElementById(this.dataset.tab + 'Tab').classList.add('active');
                     
-                    // Cargar contenido si es necesario
-                    if (this.dataset.tab === 'series' && series.length === 0) {
-                        loadSeries();
-                    } else if (this.dataset.tab === 'movies' && movies.length === 0) {
+                    // Load content if needed
+                    const tabType = this.dataset.tab;
+                    if (tabType === 'movies' && movies.length === 0) {
                         loadMovies();
+                    } else if (tabType === 'series' && series.length === 0) {
+                        loadSeries();
                     }
                 });
             });
 
-            // Manejar filtro de categorías
-            categoryFilter.addEventListener('change', filterChannels);
-
-            // Exportar M3U
-            exportM3U.addEventListener('click', exportM3UList);
-
+            // Main connection function
             async function connectToXtream() {
                 const url = serverUrl.value.trim();
                 const user = username.value.trim();
                 const pass = password.value.trim();
 
                 if (!url || !user || !pass) {
-                    showStatus('Por favor, completa todos los campos', 'error', connectionStatus);
+                    showStatus('Please complete all fields', 'error', connectionStatus);
                     return;
                 }
 
-                showStatus('Conectando al servidor...', 'warning', connectionStatus);
+                showStatus('Connecting to Xtream Codes...', 'warning', connectionStatus);
                 connectBtn.disabled = true;
 
                 try {
-                    // Construir URL base para la API
                     const baseUrl = url.replace(/\/+$/, '');
                     
-                    // Obtener información del servidor
+                    // Test connection and get server info
                     const serverInfoUrl = `${baseUrl}/player_api.php?username=${user}&password=${pass}&action=server_info`;
                     const serverResponse = await fetch(serverInfoUrl);
                     
                     if (!serverResponse.ok) {
-                        throw new Error(`Error del servidor: ${serverResponse.status}`);
+                        throw new Error(`Server error: ${serverResponse.status}`);
                     }
                     
                     serverData = await serverResponse.json();
                     
                     if (serverData.user_info.auth === 0) {
-                        throw new Error('Credenciales incorrectas');
+                        throw new Error('Invalid credentials - authentication failed');
                     }
 
-                    // Mostrar información del servidor
+                    // Display server information
                     displayServerInfo(serverData);
                     
-                    // Cargar categorías y canales
-                    await loadCategories(user, pass, baseUrl);
-                    await loadLiveStreams(user, pass, baseUrl);
-                    
-                    showStatus('Conexión exitosa', 'success', connectionStatus);
+                    // Load all content
+                    await Promise.all([
+                        loadLiveStreams(user, pass, baseUrl),
+                        loadCategories(user, pass, baseUrl)
+                    ]);
+
+                    showStatus('Successfully connected to Xtream Codes', 'success', connectionStatus);
                     serverInfoSection.classList.remove('hidden');
                     contentSection.classList.remove('hidden');
                     
                 } catch (error) {
-                    console.error('Error de conexión:', error);
-                    showStatus(`Error: ${error.message}`, 'error', connectionStatus);
+                    console.error('Connection error:', error);
+                    showStatus(`Connection failed: ${error.message}`, 'error', connectionStatus);
                 } finally {
                     connectBtn.disabled = false;
                 }
@@ -519,45 +625,135 @@
                 const userInfo = data.user_info;
                 const serverInfoData = data.server_info;
                 
-                serverInfo.innerHTML = `
+                let html = `
                     <div class="server-info">
-                        <h3>Información del Usuario</h3>
-                        <p><strong>Usuario:</strong> ${userInfo.username}</p>
-                        <p><strong>Estado:</strong> ${userInfo.status}</p>
-                        <p><strong>Mensaje:</strong> ${userInfo.message || 'N/A'}</p>
-                        <p><strong>Expiración:</strong> ${userInfo.exp_date ? new Date(userInfo.exp_date * 1000).toLocaleDateString() : 'Ilimitado'}</p>
-                        <p><strong>Concurrentes:</strong> ${userInfo.max_connections}</p>
-                    </div>
-                    ${serverInfoData ? `
-                    <div class="server-info">
-                        <h3>Información del Servidor</h3>
-                        <p><strong>URL:</strong> ${serverInfoData.url}</p>
-                        <p><strong>Puerto:</strong> ${serverInfoData.port}</p>
-                        <p><strong>Versión:</strong> ${serverInfoData.version || 'N/A'}</p>
-                    </div>
-                    ` : ''}
+                        <h3><i class="fas fa-user"></i> User Information</h3>
+                        <div class="server-info-content">
+                            <div class="info-item">
+                                <span class="info-label">Username:</span>
+                                <span class="info-value">${userInfo.username}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Status:</span>
+                                <span class="info-value" style="color: ${userInfo.status === 'Active' ? 'var(--success)' : 'var(--danger)'}">${userInfo.status}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Expiration:</span>
+                                <span class="info-value">${userInfo.exp_date ? new Date(userInfo.exp_date * 1000).toLocaleDateString() : 'Never'}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Max Connections:</span>
+                                <span class="info-value">${userInfo.max_connections}</span>
+                            </div>
                 `;
+
+                if (serverInfoData) {
+                    html += `
+                            <div class="info-item">
+                                <span class="info-label">Server URL:</span>
+                                <span class="info-value">${serverInfoData.url || 'N/A'}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Port:</span>
+                                <span class="info-value">${serverInfoData.port || 'N/A'}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Version:</span>
+                                <span class="info-value">${serverInfoData.version || 'N/A'}</span>
+                            </div>
+                    `;
+                }
+
+                html += `
+                        </div>
+                    </div>
+                `;
+
+                serverInfo.innerHTML = html;
             }
 
             async function loadCategories(username, password, baseUrl) {
                 try {
-                    const categoriesUrl = `${baseUrl}/player_api.php?username=${username}&password=${password}&action=get_live_categories`;
-                    const response = await fetch(categoriesUrl);
-                    categories = await response.json();
-                    
-                    // Llenar el selector de categorías
-                    categoryFilter.innerHTML = '<option value="all">Todas las categorías</option>';
-                    categories.forEach(cat => {
-                        const option = document.createElement('option');
-                        option.value = cat.category_id;
-                        option.textContent = cat.category_name;
-                        categoryFilter.appendChild(option);
-                    });
-                    
+                    // Load live categories
+                    const liveCategoriesUrl = `${baseUrl}/player_api.php?username=${username}&password=${password}&action=get_live_categories`;
+                    const liveResponse = await fetch(liveCategoriesUrl);
+                    categories.live = await liveResponse.json();
+
+                    // Load VOD categories
+                    const vodCategoriesUrl = `${baseUrl}/player_api.php?username=${username}&password=${password}&action=get_vod_categories`;
+                    const vodResponse = await fetch(vodCategoriesUrl);
+                    categories.movies = await vodResponse.json();
+
+                    // Load series categories
+                    const seriesCategoriesUrl = `${baseUrl}/player_api.php?username=${username}&password=${password}&action=get_series_categories`;
+                    const seriesResponse = await fetch(seriesCategoriesUrl);
+                    categories.series = await seriesResponse.json();
+
+                    // Display categories filters
+                    displayCategoriesFilters();
+
                 } catch (error) {
-                    console.error('Error cargando categorías:', error);
-                    showStatus('Error cargando categorías', 'error', connectionStatus);
+                    console.error('Error loading categories:', error);
                 }
+            }
+
+            function displayCategoriesFilters() {
+                // Live categories
+                const liveCategoriesContainer = document.getElementById('liveCategories');
+                liveCategoriesContainer.innerHTML = '<div class="category-tag active" data-category="all">All</div>';
+                categories.live.forEach(cat => {
+                    liveCategoriesContainer.innerHTML += `<div class="category-tag" data-category="${cat.category_id}">${cat.category_name}</div>`;
+                });
+
+                // Movie categories
+                const movieCategoriesContainer = document.getElementById('movieCategories');
+                movieCategoriesContainer.innerHTML = '<div class="category-tag active" data-category="all">All</div>';
+                categories.movies.forEach(cat => {
+                    movieCategoriesContainer.innerHTML += `<div class="category-tag" data-category="${cat.category_id}">${cat.category_name}</div>`;
+                });
+
+                // Series categories
+                const seriesCategoriesContainer = document.getElementById('seriesCategories');
+                seriesCategoriesContainer.innerHTML = '<div class="category-tag active" data-category="all">All</div>';
+                categories.series.forEach(cat => {
+                    seriesCategoriesContainer.innerHTML += `<div class="category-tag" data-category="${cat.category_id}">${cat.category_name}</div>`;
+                });
+
+                // Add event listeners to category tags
+                document.querySelectorAll('.category-tag').forEach(tag => {
+                    tag.addEventListener('click', function() {
+                        const container = this.closest('.categories-filter');
+                        container.querySelectorAll('.category-tag').forEach(t => t.classList.remove('active'));
+                        this.classList.add('active');
+                        
+                        const categoryId = this.dataset.category;
+                        const tabType = container.id.replace('Categories', '');
+                        filterContent(tabType, categoryId);
+                    });
+                });
+            }
+
+            function filterContent(type, categoryId) {
+                let items = [];
+                let container = null;
+
+                switch (type) {
+                    case 'live':
+                        items = liveStreams;
+                        container = document.getElementById('liveChannels');
+                        break;
+                    case 'movie':
+                        items = movies;
+                        container = document.getElementById('moviesList');
+                        break;
+                    case 'series':
+                        items = series;
+                        container = document.getElementById('seriesList');
+                        break;
+                }
+
+                const filtered = categoryId === 'all' ? items : items.filter(item => item.category_id == categoryId);
+                displayContent(filtered, container, type);
             }
 
             async function loadLiveStreams(username, password, baseUrl) {
@@ -566,83 +762,12 @@
                     const response = await fetch(streamsUrl);
                     liveStreams = await response.json();
                     
-                    displayLiveChannels(liveStreams);
+                    displayContent(liveStreams, document.getElementById('liveChannels'), 'live');
                     
                 } catch (error) {
-                    console.error('Error cargando canales:', error);
-                    showStatus('Error cargando canales en vivo', 'error', connectionStatus);
+                    console.error('Error loading live streams:', error);
+                    showStatus('Error loading live streams', 'error', connectionStatus);
                 }
-            }
-
-            function displayLiveChannels(streams) {
-                liveChannels.innerHTML = '';
-                
-                if (streams.length === 0) {
-                    liveChannels.innerHTML = '<p>No se encontraron canales</p>';
-                    return;
-                }
-                
-                streams.forEach(stream => {
-                    const channelCard = document.createElement('div');
-                    channelCard.className = 'channel-card';
-                    channelCard.innerHTML = `
-                        <img src="${stream.stream_icon || 'https://via.placeholder.com/60x60/2c3e50/ecf0f1?text=TV'}" 
-                             alt="${stream.name}" 
-                             class="channel-logo"
-                             onerror="this.src='https://via.placeholder.com/60x60/2c3e50/ecf0f1?text=TV'">
-                        <div class="channel-name">${stream.name}</div>
-                        <div class="channel-category">${getCategoryName(stream.category_id)}</div>
-                    `;
-                    
-                    // Agregar evento para reproducir
-                    channelCard.addEventListener('click', () => {
-                        playStream(stream);
-                    });
-                    
-                    liveChannels.appendChild(channelCard);
-                });
-            }
-
-            async function loadSeries() {
-                try {
-                    const baseUrl = serverUrl.value.replace(/\/+$/, '');
-                    const user = username.value.trim();
-                    const pass = password.value.trim();
-                    
-                    const seriesUrl = `${baseUrl}/player_api.php?username=${user}&password=${pass}&action=get_series`;
-                    const response = await fetch(seriesUrl);
-                    series = await response.json();
-                    
-                    displaySeries(series);
-                    
-                } catch (error) {
-                    console.error('Error cargando series:', error);
-                    showStatus('Error cargando series', 'error', connectionStatus);
-                }
-            }
-
-            function displaySeries(seriesListData) {
-                seriesList.innerHTML = '';
-                
-                if (seriesListData.length === 0) {
-                    seriesList.innerHTML = '<p>No se encontraron series</p>';
-                    return;
-                }
-                
-                seriesListData.forEach(serie => {
-                    const seriesCard = document.createElement('div');
-                    seriesCard.className = 'channel-card';
-                    seriesCard.innerHTML = `
-                        <img src="${serie.cover || serie.cover_big || 'https://via.placeholder.com/60x60/2c3e50/ecf0f1?text=SERIE'}" 
-                             alt="${serie.name}" 
-                             class="channel-logo"
-                             onerror="this.src='https://via.placeholder.com/60x60/2c3e50/ecf0f1?text=SERIE'">
-                        <div class="channel-name">${serie.name}</div>
-                        <div class="channel-category">${serie.genre || 'Serie'}</div>
-                    `;
-                    
-                    seriesList.appendChild(seriesCard);
-                });
             }
 
             async function loadMovies() {
@@ -655,72 +780,90 @@
                     const response = await fetch(moviesUrl);
                     movies = await response.json();
                     
-                    displayMovies(movies);
+                    displayContent(movies, document.getElementById('moviesList'), 'movies');
                     
                 } catch (error) {
-                    console.error('Error cargando películas:', error);
-                    showStatus('Error cargando películas', 'error', connectionStatus);
+                    console.error('Error loading movies:', error);
+                    showStatus('Error loading movies', 'error', connectionStatus);
                 }
             }
 
-            function displayMovies(moviesListData) {
-                moviesList.innerHTML = '';
-                
-                if (moviesListData.length === 0) {
-                    moviesList.innerHTML = '<p>No se encontraron películas</p>';
+            async function loadSeries() {
+                try {
+                    const baseUrl = serverUrl.value.replace(/\/+$/, '');
+                    const user = username.value.trim();
+                    const pass = password.value.trim();
+                    
+                    const seriesUrl = `${baseUrl}/player_api.php?username=${user}&password=${pass}&action=get_series`;
+                    const response = await fetch(seriesUrl);
+                    series = await response.json();
+                    
+                    displayContent(series, document.getElementById('seriesList'), 'series');
+                    
+                } catch (error) {
+                    console.error('Error loading series:', error);
+                    showStatus('Error loading series', 'error', connectionStatus);
+                }
+            }
+
+            function displayContent(items, container, type) {
+                if (!items || items.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <i class="fas fa-tv"></i>
+                            <h3>No content available</h3>
+                            <p>No ${type} found in your subscription</p>
+                        </div>
+                    `;
                     return;
                 }
-                
-                moviesListData.forEach(movie => {
-                    const movieCard = document.createElement('div');
-                    movieCard.className = 'channel-card';
-                    movieCard.innerHTML = `
-                        <img src="${movie.stream_icon || movie.cover || 'https://via.placeholder.com/60x60/2c3e50/ecf0f1?text=PELI'}" 
-                             alt="${movie.name}" 
-                             class="channel-logo"
-                             onerror="this.src='https://via.placeholder.com/60x60/2c3e50/ecf0f1?text=PELI'">
-                        <div class="channel-name">${movie.name}</div>
-                        <div class="channel-category">${movie.genre || 'Película'}</div>
-                    `;
+
+                let html = '';
+                items.forEach(item => {
+                    const logoUrl = item.stream_icon || item.cover || 'https://via.placeholder.com/60x60/2c3e50/ecf0f1?text=TV';
+                    const streamUrl = generateStreamUrl(item, type);
                     
-                    moviesList.appendChild(movieCard);
+                    html += `
+                        <div class="channel-card" onclick="playStream('${streamUrl}', '${item.name.replace(/'/g, "\\'")}')">
+                            <img src="${logoUrl}" 
+                                 alt="${item.name}" 
+                                 class="channel-logo"
+                                 onerror="this.src='https://via.placeholder.com/60x60/2c3e50/ecf0f1?text=TV'">
+                            <div class="channel-name">${item.name}</div>
+                            <div class="channel-category">${getCategoryName(item.category_id, type)}</div>
+                        </div>
+                    `;
                 });
+
+                container.innerHTML = html;
             }
 
-            function filterChannels() {
-                const categoryId = categoryFilter.value;
-                
-                if (categoryId === 'all') {
-                    displayLiveChannels(liveStreams);
-                } else {
-                    const filteredStreams = liveStreams.filter(stream => stream.category_id == categoryId);
-                    displayLiveChannels(filteredStreams);
-                }
-            }
-
-            function getCategoryName(categoryId) {
-                const category = categories.find(cat => cat.category_id == categoryId);
-                return category ? category.category_name : 'General';
-            }
-
-            function playStream(stream) {
+            function generateStreamUrl(item, type) {
                 const baseUrl = serverUrl.value.replace(/\/+$/, '');
                 const user = username.value.trim();
                 const pass = password.value.trim();
                 
-                // Construir URL del stream
-                const streamUrl = `${baseUrl}/live/${user}/${pass}/${stream.stream_id}.m3u8`;
-                
-                // Aquí puedes implementar la reproducción del stream
-                // Por ejemplo, abrir en una nueva ventana o usar un reproductor integrado
-                window.open(streamUrl, '_blank');
-                
-                showStatus(`Reproduciendo: ${stream.name}`, 'success', connectionStatus);
+                switch (type) {
+                    case 'live':
+                        return `${baseUrl}/live/${user}/${pass}/${item.stream_id}.m3u8`;
+                    case 'movies':
+                        return `${baseUrl}/movie/${user}/${pass}/${item.stream_id}.m3u8`;
+                    case 'series':
+                        return `${baseUrl}/series/${user}/${pass}/${item.stream_id}.m3u8`;
+                    default:
+                        return '';
+                }
             }
 
-            function exportM3UList() {
-                if (!liveStreams.length) {
-                    showStatus('No hay canales para exportar', 'error', connectionStatus);
+            function getCategoryName(categoryId, type) {
+                const categoryList = categories[type];
+                const category = categoryList.find(cat => cat.category_id == categoryId);
+                return category ? category.category_name : 'General';
+            }
+
+            function exportM3UPlaylist() {
+                if (liveStreams.length === 0) {
+                    showStatus('No channels available to export', 'error', connectionStatus);
                     return;
                 }
 
@@ -732,33 +875,43 @@
                 
                 liveStreams.forEach(stream => {
                     const streamUrl = `${baseUrl}/live/${user}/${pass}/${stream.stream_id}.m3u8`;
-                    m3uContent += `#EXTINF:-1 tvg-id="${stream.epg_channel_id || ''}" tvg-name="${stream.name}" tvg-logo="${stream.stream_icon || ''}" group-title="${getCategoryName(stream.category_id)}",${stream.name}\n`;
+                    m3uContent += `#EXTINF:-1 tvg-id="${stream.epg_channel_id || ''}" tvg-name="${stream.name}" tvg-logo="${stream.stream_icon || ''}" group-title="${getCategoryName(stream.category_id, 'live')}",${stream.name}\n`;
                     m3uContent += `${streamUrl}\n`;
                 });
                 
-                // Crear y descargar archivo
+                // Create and download file
                 const blob = new Blob([m3uContent], { type: 'application/x-mpegurl' });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = 'xtream_channels.m3u';
+                a.download = 'xtream_playlist.m3u';
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
                 
-                showStatus('Lista M3U exportada correctamente', 'success', connectionStatus);
+                showStatus('M3U playlist exported successfully', 'success', connectionStatus);
+            }
+
+            function playStream(streamUrl, streamName) {
+                // Open stream in new window/tab
+                window.open(streamUrl, '_blank');
+                
+                showStatus(`Playing: ${streamName}`, 'success', connectionStatus);
             }
 
             function showStatus(message, type, container) {
                 container.innerHTML = `<div class="status-${type} status-message">
-                    <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'warning' ? 'exclamation-triangle' : 'exclamation-circle'}"></i>
+                    <i class="fas fa-${type === 'success' ? 'check' : type === 'warning' ? 'exclamation-triangle' : 'exclamation-circle'}"></i>
                     <span>${message}</span>
                 </div>`;
             }
 
-            // Ejemplo de datos de prueba (puedes eliminar esto)
-            serverUrl.value = 'http://your-xtream-server.com:8080';
+            // Make playStream available globally
+            window.playStream = playStream;
+
+            // Example data for testing (remove in production)
+            serverUrl.value = 'http://your-server.com:8080';
             username.value = 'demo_user';
             password.value = 'demo_pass';
         });

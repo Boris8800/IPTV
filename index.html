@@ -5,16 +5,12 @@
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Complete IPTV Platform (Enhanced)</title>
 
-  <!-- FontAwesome y hls.js siguen desde CDN como en tu original -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
   
-  <!-- CSS separado -->
   <link rel="stylesheet" href="styles.css">
-
 </head>
 <body>
-  <!-- Header -->
   <header role="banner">
     <div class="container">
       <div class="header-content" role="navigation" aria-label="Main navigation">
@@ -22,21 +18,7 @@
           <i class="fas fa-tv"></i>
           <h1>IPTV Web</h1>
         </div>
-        
-        <!-- Botón Menú Móvil -->
-        <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Toggle menu" aria-expanded="false">
-          <span></span>
-          <span></span>
-          <span></span>
-        </button>
 
-        <ul class="nav-links" role="menubar" id="navLinks">
-          <li role="none"><a href="#" class="active" role="menuitem"><i class="fas fa-home" aria-hidden="true"></i> Home</a></li>
-          <li role="none"><a href="#player" role="menuitem"><i class="fas fa-play-circle" aria-hidden="true"></i> Player</a></li>
-          <li role="none"><a href="#playlists" role="menuitem"><i class="fas fa-list" aria-hidden="true"></i> Playlists</a></li>
-          <li role="none"><a href="#upload" role="menuitem"><i class="fas fa-upload" aria-hidden="true"></i> Upload</a></li>
-        </ul>
-        
         <div class="user-actions" role="region" aria-label="User actions">
           <div class="search-bar" role="search" aria-label="Buscar canales">
             <i class="fas fa-search" aria-hidden="true"></i>
@@ -48,12 +30,15 @@
           <button class="btn btn-outline" id="addUrlBtn" aria-haspopup="dialog">
             <i class="fas fa-link" aria-hidden="true"></i> <span class="btn-text">Add URL</span>
           </button>
+          <button class="btn btn-outline" id="xtreamModalBtn" aria-haspopup="dialog">
+            <i class="fas fa-satellite-dish" aria-hidden="true"></i> <span class="btn-text">Xtream</span>
+          </button>
         </div>
       </div>
     </div>
   </header>
 
-  <!-- Main Content -->
+  <!-- Resto del contenido se mantiene igual -->
   <div class="container" role="main">
     <div class="main-content">
       <!-- Channels Sidebar -->
@@ -96,7 +81,6 @@
             <button class="control-btn" id="settingsBtn" aria-label="Settings"><i class="fas fa-cog" aria-hidden="true"></i></button>
             <select class="quality-selector" id="qualitySelector" aria-label="Quality selector">
               <option value="auto">Auto</option>
-              <!-- quality options se poblarán dinámicamente -->
             </select>
           </div>
         </div>
@@ -109,39 +93,12 @@
         <h2><i class="fas fa-list" aria-hidden="true"></i> Your Playlists</h2>
         <p>Manage and organize your IPTV playlists</p>
       </div>
-
       <div class="playlists-grid" id="playlistsGrid" aria-live="polite">
         <div class="empty-state" id="emptyPlaylists">
           <i class="fas fa-list" aria-hidden="true"></i>
           <h3>No playlists available</h3>
           <p>Upload your first M3U playlist to get started</p>
         </div>
-      </div>
-    </section>
-
-    <!-- Upload Section -->
-    <section class="upload-section" id="upload" aria-label="Upload playlist">
-      <div class="section-title">
-        <h2><i class="fas fa-upload" aria-hidden="true"></i> Upload Playlist</h2>
-        <p>Import your M3U playlist to start watching your channels organized by categories</p>
-      </div>
-
-      <div class="upload-area" id="uploadArea" role="button" tabindex="0" aria-label="Drag and drop M3U file or click to select">
-        <i class="fas fa-cloud-upload-alt" aria-hidden="true"></i>
-        <h3>Drag your M3U file here</h3>
-        <p>or click to select a file (no size limit)</p>
-        <input type="file" id="fileInput" accept=".m3u,.m3u8,.xspf,.json" style="display:none">
-        <div class="formats-list">
-          <div class="format-tag">M3U</div>
-          <div class="format-tag">M3U8</div>
-          <div class="format-tag">XSPF</div>
-          <div class="format-tag">JSON</div>
-        </div>
-      </div>
-
-      <div class="playlist-actions-main">
-        <button class="btn btn-primary" id="addPlaylistBtn"><i class="fas fa-plus" aria-hidden="true"></i> New Playlist</button>
-        <button class="btn btn-outline" id="addUrlModalBtn"><i class="fas fa-link" aria-hidden="true"></i> Add from URL</button>
       </div>
     </section>
   </div>
@@ -203,10 +160,20 @@
     </div>
   </div>
 
-  <!-- Mensaje informativo abajo (no visible por defecto) -->
+  <!-- Upload Modal -->
+  <div class="modal" id="uploadModal" style="display:none;">
+    <div class="modal-header">
+      <h3>Add Playlist</h3>
+      <button class="close-modal" id="closeUploadModal">&times;</button>
+    </div>
+    <div class="modal-content">
+      <input type="file" id="fileInput" accept=".m3u,.m3u8,.xspf,.json">
+      <p>Select a playlist file to upload.</p>
+    </div>
+  </div>
+
   <div id="globalStatus" style="position:fixed; bottom:16px; left:16px; z-index:1100;"></div>
 
-  <!-- JavaScript separado -->
   <script src="script.js"></script>
 </body>
 </html>

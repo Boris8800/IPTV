@@ -1,27 +1,8 @@
-/* =====================================================================
-   STREAMTV: Enhanced Single-File HTML
-   - Replaces localStorage with IndexedDB (robust for big playlists)
-   - Improved hls.js integration with real quality switching
-   - Paginated group rendering ("Load more") to avoid huge DOM
-   - Accessibility improvements (aria, keyboard)
-   - Comments include example proxy implementations (PHP & Node)
-   ===================================================================== */
-
 (function(){
   'use strict';
 
-  /* ---------------------------
-     IndexedDB helper (simple promisified wrapper)
-     Stores:
-       - playlists (object store)
-       - favs (single record)
-       - settings (customProxy)
-     Key design:
-       - playlists store: keyPath = id (timestamp)
-  ----------------------------*/
   const IDB_DB = 'streamtv-db-v1';
   const IDB_VERSION = 1;
-  const IDB_STORES = ['playlists','settings','favorites'];
 
   function openDb() {
     return new Promise((resolve, reject) => {
@@ -32,7 +13,7 @@
           db.createObjectStore('playlists', { keyPath: 'id' });
         }
         if (!db.objectStoreNames.contains('favorites')) {
-          db.createObjectStore('favorites', { keyPath: 'key' });
+          const favStore = db.createObjectStore('favorites', { keyPath: 'id' });
         }
         if (!db.objectStoreNames.contains('settings')) {
           db.createObjectStore('settings', { keyPath: 'key' });
@@ -53,6 +34,7 @@
       req.onerror = () => reject(req.error);
     });
   }
+
   async function idbGet(storeName, key) {
     const db = await openDb();
     return new Promise((resolve, reject) => {
@@ -63,6 +45,7 @@
       req.onerror = () => reject(req.error);
     });
   }
+
   async function idbGetAll(storeName) {
     const db = await openDb();
     return new Promise((resolve, reject) => {
@@ -73,6 +56,7 @@
       req.onerror = () => reject(req.error);
     });
   }
+
   async function idbDelete(storeName, key) {
     const db = await openDb();
     return new Promise((resolve, reject) => {
@@ -87,14 +71,14 @@
   /* ---------------------------
      App State
   ----------------------------*/
-  let playlists = []; // loaded from IDB
-  let favorites = []; // array of channelIds
+  let playlists = [];
+  let favorites = new Set(); // Cambiar a Set para mejor rendimiento
   let currentPlaylistId = null;
   let currentPlaylist = [];
   let currentCategory = 'all';
   let hls = null;
   let customProxyUrl = null;
-  const CHANNEL_RENDER_BATCH = 60; // cantidad por "paginación" en cada grupo
+  const CHANNEL_RENDER_BATCH = 60;
 
   /* ---------------------------
      DOM references
@@ -129,11 +113,8 @@
   const globalStatus = document.getElementById('globalStatus');
   const mobileMenuBtn = document.getElementById('mobileMenuBtn');
   const navLinks = document.getElementById('navLinks');
+  const xtreamModalBtn = document.getElementById('xtreamModalBtn');
 
-  /* ---------------------------
-     Default CORS proxies (UI only)
-     Nota: es recomendable montar tu propio proxy (ver comentarios abajo)
-  ----------------------------*/
   const CORS_PROXIES = {
     direct: '',
     corsproxy: 'https://corsproxy.io/?',
@@ -149,51 +130,194 @@
   /* ---------------------------
      Init
   ----------------------------*/
-  document.addEventListener('DOMContentLoaded', async () => {
-    await loadStateFromIDB();
-    setupEventListeners();
-    renderPlaylistsUI();
-    if (currentPlaylistId) {
-      const p = playlists.find(x => x.id === currentPlaylistId);
-      if (p) {
-        currentPlaylist = p.channels || [];
-        renderGroups(currentPlaylist);
-      }
+  document.addEventListener('DOMContentLoaded', () => {
+    // Add Playlist button logic
+    const uploadBtn = document.getElementById('uploadBtn');
+    const uploadModal = document.getElementById('uploadModal');
+    const closeUploadModal = document.getElementById('closeUploadModal');
+    const fileInput = document.getElementById('fileInput');
+
+    if (uploadBtn && uploadModal && closeUploadModal) {
+      uploadBtn.addEventListener('click', () => {
+        uploadModal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+      });
+      closeUploadModal.addEventListener('click', () => {
+        uploadModal.style.display = 'none';
+        document.body.style.overflow = 'auto';
+      });
+      window.addEventListener('click', (e) => {
+        if (e.target === uploadModal) {
+          uploadModal.style.display = 'none';
+          document.body.style.overflow = 'auto';
+        }
+      });
     }
-    // init custom proxy input if exists
-    const s = await idbGet('settings', 'customProxyUrl');
-    if (s && s.value) {
-      customProxyUrl = s.value;
-      CORS_PROXIES.custom = customProxyUrl;
-      customProxyUrlInput.value = customProxyUrl;
+
+    // Handle file upload from modal
+    if (fileInput) {
+      fileInput.addEventListener('change', function(event) {
+        const file = event.target.files && event.target.files[0];
+        if (file) {
+          parseM3UFile(file);
+          uploadModal.style.display = 'none';
+          document.body.style.overflow = 'auto';
+        }
+        fileInput.value = '';
+      });
+    }
+
+    // Add URL button
+    const addUrlBtn = document.getElementById('addUrlBtn');
+    const urlModal = document.getElementById('urlModal');
+    const closeUrlModal = document.getElementById('closeUrlModal');
+    const loadUrlBtn = document.getElementById('loadUrlBtn');
+    if (addUrlBtn && urlModal) {
+      addUrlBtn.addEventListener('click', () => {
+        urlModal.style.display = 'flex';
+        urlModal.setAttribute('aria-hidden', 'false');
+        document.body.style.overflow = 'hidden';
+      });
+    }
+    if (closeUrlModal && urlModal) {
+      closeUrlModal.addEventListener('click', () => {
+        urlModal.style.display = 'none';
+        urlModal.setAttribute('aria-hidden', 'true');
+        document.body.style.overflow = 'auto';
+      });
+    }
+    if (urlModal) {
+      window.addEventListener('click', (e) => {
+        if (e.target === urlModal) {
+          urlModal.style.display = 'none';
+          urlModal.setAttribute('aria-hidden', 'true');
+          document.body.style.overflow = 'auto';
+        }
+      });
+    }
+    // Ensure Load Playlist from URL button works
+    if (loadUrlBtn) {
+      loadUrlBtn.addEventListener('click', async () => {
+        loadUrlBtn.disabled = true;
+        await loadUrlPlaylist();
+        loadUrlBtn.disabled = false;
+      });
+    }
+
+    // Xtream button
+    const xtreamModalBtn = document.getElementById('xtreamModalBtn');
+    if (xtreamModalBtn) {
+      xtreamModalBtn.addEventListener('click', () => {
+        // Redirect to xtream.html or show Xtream modal
+        window.location.href = 'xtream.html';
+      });
+    }
+
+    categoryTabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        categoryTabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        currentCategory = tab.dataset.category;
+        renderGroups(currentPlaylist);
+      });
+      tab.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') tab.click(); });
+    });
+
+    // Fix: search bar filters channels in real time
+    if (searchInput) {
+      searchInput.addEventListener('input', function () {
+        const term = searchInput.value.trim().toLowerCase();
+        if (!term) {
+          renderGroups(currentPlaylist);
+          return;
+        }
+        // Filter by channel name
+        const filtered = currentPlaylist.filter(ch =>
+          (ch.name || '').toLowerCase().includes(term)
+        );
+        renderGroups(filtered);
+      });
+    }
+
+    // Player buttons functionality
+    if (playBtn) {
+      playBtn.addEventListener('click', function () {
+        if (videoPlayer) videoPlayer.play();
+      });
+    }
+    if (pauseBtn) {
+      pauseBtn.addEventListener('click', function () {
+        if (videoPlayer) videoPlayer.pause();
+      });
+    }
+    if (fullscreenBtn) {
+      fullscreenBtn.addEventListener('click', function () {
+        if (videoPlayer) {
+          if (videoPlayer.requestFullscreen) {
+            videoPlayer.requestFullscreen();
+          } else if (videoPlayer.webkitRequestFullscreen) {
+            videoPlayer.webkitRequestFullscreen();
+          } else if (videoPlayer.msRequestFullscreen) {
+            videoPlayer.msRequestFullscreen();
+          }
+        }
+      });
     }
   });
 
   /* ---------------------------
-     Load/Save state in IDB
+     Load/Save state in IDB - CORREGIDO
   ----------------------------*/
   async function loadStateFromIDB() {
-    playlists = await idbGetAll('playlists') || [];
-    // idbGetAll returns array of playlist objects
-    // Order newest first (id is timestamp)
-    playlists.sort((a,b)=>b.id - a.id);
-    const favRecord = await idbGet('favorites', 'favlist');
-    favorites = (favRecord && favRecord.channels) ? favRecord.channels : [];
-    // pick first playlist as current if not set
-    if (playlists.length > 0 && !currentPlaylistId) {
-      currentPlaylistId = playlists[0].id;
+    try {
+      playlists = await idbGetAll('playlists') || [];
+      playlists.sort((a,b) => b.id - a.id);
+      
+      // CARGAR FAVORITOS CORRECTAMENTE
+      const favRecords = await idbGetAll('favorites');
+      favorites = new Set();
+      if (favRecords && favRecords.length > 0) {
+        favRecords.forEach(fav => {
+          if (fav.id) favorites.add(fav.id.toString());
+        });
+      }
+      
+      if (playlists.length > 0 && !currentPlaylistId) {
+        currentPlaylistId = playlists[0].id;
+      }
+    } catch (error) {
+      console.error('Error loading state:', error);
+      playlists = [];
+      favorites = new Set();
     }
   }
 
   async function savePlaylistsToIDB() {
-    // Save each playlist object individually
     for (const pl of playlists) {
       await idbPut('playlists', pl);
     }
   }
 
+  // GUARDAR FAVORITOS CORRECTAMENTE
   async function saveFavoritesToIDB() {
-    await idbPut('favorites', { key: 'favlist', channels: favorites });
+    try {
+      // Limpiar todos los favoritos existentes
+      const existingFavs = await idbGetAll('favorites');
+      for (const fav of existingFavs) {
+        await idbDelete('favorites', fav.id);
+      }
+      
+      // Guardar cada favorito individualmente
+      for (const favId of favorites) {
+        await idbPut('favorites', { 
+          id: favId.toString(),
+          channelId: favId,
+          timestamp: Date.now()
+        });
+      }
+    } catch (error) {
+      console.error('Error saving favorites:', error);
+    }
   }
 
   async function saveSetting(key, value) {
@@ -204,23 +328,18 @@
      Event listeners
   ----------------------------*/
   function setupEventListeners() {
-    // Mobile menu
     mobileMenuBtn.addEventListener('click', toggleMobileMenu);
-    
-    // Player controls
     playBtn.addEventListener('click', playVideo);
     pauseBtn.addEventListener('click', pauseVideo);
     fullscreenBtn.addEventListener('click', toggleFullscreen);
     qualitySelector.addEventListener('change', onQualityChange);
 
-    // Upload
     uploadArea.addEventListener('click', () => fileInput.click());
     uploadArea.addEventListener('keydown', e => { if (e.key === 'Enter') fileInput.click(); });
     uploadBtn.addEventListener('click', () => fileInput.click());
     addPlaylistBtn.addEventListener('click', () => fileInput.click());
     fileInput.addEventListener('change', handleFileUpload);
 
-    // URL Modal
     addUrlModalBtn.addEventListener('click', openUrlModal);
     addUrlBtn.addEventListener('click', openUrlModal);
     closeUrlModal.addEventListener('click', closeUrlModalFn);
@@ -239,10 +358,8 @@
       if (e.target === urlModal) closeUrlModalFn();
     });
 
-    // Search
     searchInput.addEventListener('input', filterChannels);
 
-    // Categories
     categoryTabs.forEach(tab => {
       tab.addEventListener('click', () => {
         categoryTabs.forEach(t => t.classList.remove('active'));
@@ -253,15 +370,15 @@
       tab.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') tab.click(); });
     });
 
-    // Global keyboard
     document.addEventListener('keydown', globalKeyHandler);
     uploadArea.addEventListener('dragover', handleDragOver);
     uploadArea.addEventListener('drop', handleFileDrop);
+
+    if (xtreamModalBtn) {
+      xtreamModalBtn.addEventListener('click', openXtreamModal);
+    }
   }
 
-  /* ---------------------------
-     Mobile Menu
-  ----------------------------*/
   function toggleMobileMenu() {
     mobileMenuBtn.classList.toggle('active');
     navLinks.classList.toggle('active');
@@ -269,9 +386,6 @@
     mobileMenuBtn.setAttribute('aria-expanded', !isExpanded);
   }
 
-  /* ---------------------------
-     Keyboard global handler
-  ----------------------------*/
   function globalKeyHandler(e) {
     if (e.code === 'Space' && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
       e.preventDefault();
@@ -293,7 +407,6 @@
   function handleFileUpload(event) {
     const file = event.target.files && event.target.files[0];
     if (file) parseM3UFile(file);
-    // reset input so same file can be reselected
     fileInput.value = '';
   }
 
@@ -317,7 +430,6 @@
         channels: channels
       };
       playlists.unshift(newPlaylist);
-      // save each playlist individually to IDB
       idbPut('playlists', newPlaylist).then(()=> {
         showStatus(`Playlist "${newPlaylist.name}" loaded with ${channels.length} channels`, 'success');
         currentPlaylistId = newPlaylist.id;
@@ -336,42 +448,44 @@
     const lines = content.split(/\r?\n/);
     const channels = [];
     let currentChannel = null;
+    
     for (let i=0;i<lines.length;i++){
       const line = lines[i].trim();
       if (!line) continue;
+      
       if (line.startsWith('#EXTINF:')) {
         const info = line.substring(8);
-        // parse common attributes
         const nameSplit = info.split(',');
         const name = nameSplit.slice(1).join(',').trim() || `Channel ${channels.length+1}`;
+        
         currentChannel = {
-          id: Date.now() + channels.length, // unique-ish
+          id: `ch_${Date.now()}_${channels.length}`, // ID único y consistente
           name: name,
           group: 'General',
           url: '',
           logo: 'https://via.placeholder.com/30x30/3498db/ffffff?text=TV',
-          resolution: 'HD',
-          isFavorite: false
+          resolution: 'HD'
         };
+        
         const groupMatch = line.match(/group-title="([^"]*)"/i);
         if (groupMatch) currentChannel.group = groupMatch[1];
+        
         const logoMatch = line.match(/tvg-logo="([^"]*)"/i);
         if (logoMatch) currentChannel.logo = logoMatch[1];
+        
       } else if (line.startsWith('http') || line.startsWith('rtmp') || line.includes('://')) {
         if (currentChannel) {
           currentChannel.url = line;
           channels.push(currentChannel);
           currentChannel = null;
         } else {
-          // In case file has raw URLs without EXTINF
           channels.push({
-            id: Date.now() + channels.length,
+            id: `ch_${Date.now()}_${channels.length}`,
             name: `Channel ${channels.length+1}`,
             group: 'General',
             url: line,
             logo: 'https://via.placeholder.com/30x30/3498db/ffffff?text=TV',
-            resolution: 'HD',
-            isFavorite: false
+            resolution: 'HD'
           });
         }
       }
@@ -438,7 +552,6 @@
 
   function deletePlaylist(id) {
     if (!confirm('Are you sure you want to delete this playlist?')) return;
-    // delete from IDB and from array
     idbDelete('playlists', id).then(()=> {
       playlists = playlists.filter(p=>p.id!==id);
       renderPlaylistsUI();
@@ -458,8 +571,7 @@
   }
 
   /* ---------------------------
-     Render groups and channels (paginated per group)
-     Strategy: For each group render first N channels and add "Load more" button to append next N.
+     Render groups and channels - CORREGIDO FAVORITOS
   ----------------------------*/
   function renderGroups(channels) {
     groupsList.innerHTML = '';
@@ -478,8 +590,9 @@
     // Filter by category
     let filtered = channels;
     if (currentCategory === 'favorites') {
-      filtered = channels.filter(ch => favorites.includes(ch.tempId || ch.id));
+      filtered = channels.filter(ch => favorites.has(ch.id));
     } else if (currentCategory !== 'all') {
+      // TV, Movies, Series: filter by group name (case-insensitive, partial match)
       filtered = channels.filter(ch => (ch.group || '').toLowerCase().includes(currentCategory));
     }
 
@@ -495,7 +608,6 @@
       return;
     }
 
-    // Group by group-name
     const groups = {};
     filtered.forEach(ch => {
       const g = ch.group || 'General';
@@ -518,7 +630,6 @@
       `;
       const channelsListEl = groupItem.querySelector('.channels-list');
 
-      // Keep an internal pointer for pagination
       let offset = 0;
       function renderBatch() {
         const slice = groupChannels.slice(offset, offset + CHANNEL_RENDER_BATCH);
@@ -526,45 +637,44 @@
           const chEl = document.createElement('div');
           chEl.className = 'channel-item';
           chEl.tabIndex = 0;
+          chEl.dataset.channelId = ch.id;
+          
+          // VERIFICAR SI ES FAVORITO CORRECTAMENTE
+          const isFavorite = favorites.has(ch.id);
+          
           chEl.innerHTML = `
             <img src="${escapeHtml(ch.logo||'https://via.placeholder.com/30x30/3498db/ffffff?text=TV')}" alt="${escapeHtml(ch.name)}" class="channel-logo">
             <div class="channel-info">
               <div class="channel-name">${escapeHtml(ch.name)}</div>
               <div class="channel-resolution">${escapeHtml(ch.resolution || 'HD')}</div>
             </div>
-            <button class="favorite-btn ${favorites.includes(ch.tempId || ch.id) ? 'active' : ''}" data-id="${ch.tempId || ch.id}" aria-label="Toggle favorite">
-              <i class="${favorites.includes(ch.tempId || ch.id) ? 'fas' : 'far'} fa-heart" aria-hidden="true"></i>
+            <button class="favorite-btn ${isFavorite ? 'active' : ''}" data-id="${ch.id}" aria-label="${isFavorite ? 'Remove from favorites' : 'Add to favorites'}">
+              <i class="${isFavorite ? 'fas' : 'far'} fa-heart" aria-hidden="true"></i>
             </button>
           `;
-          // click to play (unless favorite button clicked)
+          
           chEl.addEventListener('click', (e) => {
             if (e.target.closest('.favorite-btn')) return;
             playChannel(ch);
-            // mark active UI
             channelsListEl.querySelectorAll('.channel-item.active').forEach(i=>i.classList.remove('active'));
             chEl.classList.add('active');
           });
+          
           chEl.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' || e.key === ' ') chEl.click();
           });
 
-          // favorite toggle
           const favBtn = chEl.querySelector('.favorite-btn');
           favBtn.addEventListener('click', (ev) => {
             ev.stopPropagation();
-            const cid = favBtn.dataset.id;
-            toggleFavorite(cid);
-            favBtn.classList.toggle('active');
-            favBtn.innerHTML = `<i class="${favorites.includes(cid) ? 'fas' : 'far'} fa-heart" aria-hidden="true"></i>`;
+            toggleFavorite(ch.id, favBtn);
           });
 
           channelsListEl.appendChild(chEl);
         });
 
         offset += slice.length;
-        // add load more if remaining
         const remaining = groupChannels.length - offset;
-        // remove existing load-more
         const existingLoadMore = channelsListEl.querySelector('.load-more');
         if (existingLoadMore) existingLoadMore.remove();
         if (remaining > 0) {
@@ -576,7 +686,6 @@
         }
       }
 
-      // Expand/collapse group
       const header = groupItem.querySelector('.group-header');
       header.addEventListener('click', () => {
         const isActive = groupItem.classList.toggle('active');
@@ -587,24 +696,41 @@
       });
       header.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') header.click(); });
 
-      // Append group
       groupsList.appendChild(groupItem);
     });
   }
 
   /* ---------------------------
-     Favorites handling
+     Favorites handling - CORREGIDO
   ----------------------------*/
-  async function toggleFavorite(channelId) {
-    const idx = favorites.indexOf(channelId);
-    if (idx > -1) favorites.splice(idx,1);
-    else favorites.push(channelId);
-    await saveFavoritesToIDB();
+  async function toggleFavorite(channelId, buttonElement) {
+    try {
+      if (favorites.has(channelId)) {
+        favorites.delete(channelId);
+        buttonElement.classList.remove('active');
+        buttonElement.innerHTML = '<i class="far fa-heart" aria-hidden="true"></i>';
+        buttonElement.setAttribute('aria-label', 'Add to favorites');
+        showStatus('Removed from favorites', 'success');
+      } else {
+        favorites.add(channelId);
+        buttonElement.classList.add('active');
+        buttonElement.innerHTML = '<i class="fas fa-heart" aria-hidden="true"></i>';
+        buttonElement.setAttribute('aria-label', 'Remove from favorites');
+        showStatus('Added to favorites', 'success');
+      }
+      
+      await saveFavoritesToIDB();
+      
+      // Si estamos en la categoría de favoritos, actualizar la vista
+      if (currentCategory === 'favorites') {
+        renderGroups(currentPlaylist);
+      }
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+      showStatus('Error updating favorites', 'error');
+    }
   }
 
-  /* ---------------------------
-     Search/filter
-  ----------------------------*/
   function filterChannels() {
     const term = searchInput.value.trim().toLowerCase();
     if (!term) {
@@ -624,30 +750,25 @@
       try { hls.destroy(); } catch(e){}
       hls = null;
     }
-    // Clean quality selector
+    
     populateQualitySelector([]);
 
-    // if HLS (.m3u8)
     if (channel.url && channel.url.includes('.m3u8')) {
       if (Hls.isSupported()) {
         hls = new Hls({
-          // enable worker for performance
           enableWorker: true,
-          // autoStartLoad true for autoplaying playlists
           autoStartLoad: true
         });
         hls.loadSource(channel.url);
         hls.attachMedia(videoPlayer);
 
         hls.on(Hls.Events.MANIFEST_PARSED, function() {
-          // populate quality selector with available levels
           const levels = hls.levels || [];
           const qualities = levels.map(l => (l.height ? `${l.height}p` : `${l.bitrate || 'unknown'}bps`));
           populateQualitySelector(qualities);
-          videoPlayer.play().catch(()=>{ /* ignore autoplay block */ });
+          videoPlayer.play().catch(()=>{});
         });
 
-        // update selector if levels updated
         hls.on(Hls.Events.LEVEL_UPDATED, () => {
           const levels = hls.levels || [];
           const qualities = levels.map(l => (l.height ? `${l.height}p` : `${l.bitrate || 'unknown'}bps`));
@@ -658,14 +779,12 @@
           console.warn('HLS error', data);
           if (data.fatal) {
             showStatus('Playback error: ' + data.type, 'error');
-            // attempt recover for network errors
             try {
               hls.recoverMediaError();
             } catch(e){}
           }
         });
       } else if (videoPlayer.canPlayType('application/vnd.apple.mpegurl')) {
-        // native HLS (Safari)
         videoPlayer.src = channel.url;
         videoPlayer.addEventListener('loadedmetadata', function() {
           videoPlayer.play();
@@ -674,7 +793,6 @@
         showStatus('HLS not supported in this browser', 'error');
       }
     } else {
-      // normal progressive stream
       videoPlayer.src = channel.url;
       videoPlayer.load();
       videoPlayer.play().catch(()=>{});
@@ -689,17 +807,14 @@
     } else document.exitFullscreen();
   }
 
-  /* Populate quality selector with levels; choose handler to set level */
   function populateQualitySelector(qualities) {
-    // Clear existing, keep Auto option
     qualitySelector.innerHTML = '<option value="auto">Auto</option>';
     qualities.forEach((q, idx) => {
       const opt = document.createElement('option');
-      opt.value = idx; // level index for hls
+      opt.value = idx;
       opt.textContent = q;
       qualitySelector.appendChild(opt);
     });
-    // show/hide selector based on availability
     qualitySelector.style.display = qualities.length ? 'inline-block' : 'none';
   }
 
@@ -707,7 +822,7 @@
     const val = qualitySelector.value;
     if (!hls) return;
     if (val === 'auto') {
-      hls.currentLevel = -1; // auto
+      hls.currentLevel = -1;
       showStatus('Quality set to Auto', 'success');
     } else {
       const lvl = parseInt(val,10);
@@ -719,7 +834,7 @@
   }
 
   /* ---------------------------
-     URL testing & loading (with proxy options)
+     URL testing & loading
   ----------------------------*/
   async function testUrl() {
     const url = playlistUrl.value.trim();
@@ -794,9 +909,6 @@
     }
   }
 
-  /* ---------------------------
-     Custom proxy saving
-  ----------------------------*/
   async function saveCustomProxy() {
     const url = customProxyUrlInput.value.trim();
     if (!url) {
@@ -809,24 +921,23 @@
     showInlineStatus('Custom proxy URL saved successfully', 'success', urlStatus);
   }
 
-  /* ---------------------------
-     Modal open/close
-  ----------------------------*/
   function openUrlModal() {
     urlModal.style.display = 'flex';
     urlModal.setAttribute('aria-hidden','false');
     document.body.style.overflow = 'hidden';
     playlistUrl.focus();
   }
+  
   function closeUrlModalFn() {
     urlModal.style.display = 'none';
     urlModal.setAttribute('aria-hidden','true');
     document.body.style.overflow = 'auto';
   }
 
-  /* ---------------------------
-     Utility: show status
-  ----------------------------*/
+  function openXtreamModal() {
+    window.location.href = 'xtream.html';
+  }
+
   function showStatus(message, type='success', timeout=4000) {
     const el = document.createElement('div');
     el.className = `status-message status-${type}`;
@@ -844,64 +955,8 @@
     container.appendChild(s);
   }
 
-  /* ---------------------------
-     Escape HTML utility
-  ----------------------------*/
   function escapeHtml(s){ return (s+'').replace(/[&<>"']/g, function(m){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]; }); }
 
-  /* ======================================================================
-     PROXY EXAMPLES (copy these to your server). They are comments in runtime
-     but here they are published for your convenience.
-
-     PHP proxy (simple):
-     -------------------
-     <?php
-     // proxy.php
-     if (!isset($_GET['url'])) { http_response_code(400); echo 'No url'; exit; }
-     $url = $_GET['url'];
-     header('Access-Control-Allow-Origin: *');
-     $ch = curl_init($url);
-     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-     curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-     curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (StreamTV Proxy)');
-     $resp = curl_exec($ch);
-     $info = curl_getinfo($ch);
-     http_response_code($info['http_code'] ?? 200);
-     foreach (['content-type','content-length'] as $h) {
-       if (!empty($info[$h])) header($h.': '.$info[$h]);
-     }
-     echo $resp;
-     ?>
-
-     Node.js (Express) example:
-     --------------------------
-     // proxy.js
-     const express = require('express');
-     const fetch = require('node-fetch'); // or undici
-     const app = express();
-     app.get('/proxy', async (req,res)=>{
-       const url = req.query.url;
-       if (!url) return res.status(400).send('No url');
-       try {
-         const r = await fetch(url, { headers: { 'User-Agent': 'StreamTV-Proxy' }});
-         r.headers.forEach((v,k)=> res.setHeader(k,v));
-         res.status(r.status);
-         r.body.pipe(res);
-       } catch(err){
-         res.status(502).send('Upstream error');
-       }
-     });
-     app.listen(3000);
-
-     IMPORTANT: Expose your proxy only to authorized users or add rate-limits and abuse protection.
-     ====================================================================== */
-
-  /* ---------------------------
-     Small helper: sanitize for display in console/UI
-  ----------------------------*/
-  function safeLog(...args){ try { console.log(...args); } catch(e){} }
-
-  /* Expose a quick debug method */
   window.__streamtv_debug = { playlists, favorites };
 
 })();
