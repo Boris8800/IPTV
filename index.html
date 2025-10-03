@@ -111,7 +111,7 @@
 
     .channel-item { display:flex; align-items:center; gap:10px; padding:8px; border-radius:4px; margin-bottom:5px; cursor:pointer; transition:var(--transition); }
     .channel-item:hover { background: rgba(255,255,255,0.1); }
-    .channel-item.active { background: var(--primary); }
+    .channel-item.active { background: rgba(255,255,255,0.15); } /* Cambiado a tono más oscuro */
     .channel-logo { width:30px; height:30px; border-radius:4px; object-fit:cover; }
     .channel-info { flex:1; min-width:0; }
     .channel-name { font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -163,6 +163,28 @@
 
     .empty-state { text-align:center; padding:40px; color:var(--gray); }
     .empty-state i { font-size:60px; margin-bottom:20px; color:var(--primary); }
+
+    /* Estilos mejorados para el scroll de canales */
+    .channels-list::-webkit-scrollbar {
+      width: 8px;
+    }
+    .channels-list::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 4px;
+    }
+    .channels-list::-webkit-scrollbar-thumb {
+      background: var(--primary);
+      border-radius: 4px;
+    }
+    .channels-list::-webkit-scrollbar-thumb:hover {
+      background: var(--primary-dark);
+    }
+
+    /* Para Firefox */
+    .channels-list {
+      scrollbar-width: thin;
+      scrollbar-color: var(--primary) rgba(255, 255, 255, 0.05);
+    }
 
     @media (max-width:1024px) { .main-content { grid-template-columns:1fr; } .channels-sidebar { height:auto; max-height:400px; } .player-section { height:auto; } }
     @media (max-width:768px) {
@@ -468,782 +490,753 @@
   const nowPlaying = document.getElementById('nowPlaying');
   const groupsList = document.getElementById('groupsList');
   const channelsCount = document.getElementById('channelsCount');
+  const searchInput = document.getElementById('searchInput');
   const uploadArea = document.getElementById('uploadArea');
   const fileInput = document.getElementById('fileInput');
-  const uploadBtn = document.getElementById('uploadBtn');
-  const addUrlModalBtn = document.getElementById('addUrlModalBtn');
-  const addPlaylistBtn = document.getElementById('addPlaylistBtn');
-  const playlistsGrid = document.getElementById('playlistsGrid');
-  const emptyPlaylists = document.getElementById('emptyPlaylists');
-  const categoryTabs = document.querySelectorAll('.category-tab');
   const urlModal = document.getElementById('urlModal');
   const closeUrlModal = document.getElementById('closeUrlModal');
+  const addUrlBtn = document.getElementById('addUrlBtn');
+  const addUrlModalBtn = document.getElementById('addUrlModalBtn');
   const loadUrlBtn = document.getElementById('loadUrlBtn');
   const testUrlBtn = document.getElementById('testUrlBtn');
   const playlistUrl = document.getElementById('playlistUrl');
+  const proxyOptions = document.querySelectorAll('input[name="proxyOption"]');
   const customProxySection = document.getElementById('customProxySection');
   const customProxyUrlInput = document.getElementById('customProxyUrl');
-  const saveCustomProxyBtn = document.getElementById('saveCustomProxy');
+  const saveCustomProxy = document.getElementById('saveCustomProxy');
   const urlStatus = document.getElementById('urlStatus');
-  const addUrlBtn = document.getElementById('addUrlBtn');
-  const searchInput = document.getElementById('searchInput');
+  const categoryTabs = document.querySelectorAll('.category-tab');
+  const playlistsGrid = document.getElementById('playlistsGrid');
+  const emptyPlaylists = document.getElementById('emptyPlaylists');
+  const addPlaylistBtn = document.getElementById('addPlaylistBtn');
+  const uploadBtn = document.getElementById('uploadBtn');
   const globalStatus = document.getElementById('globalStatus');
 
   /* ---------------------------
-     Default CORS proxies (UI only)
-     Nota: es recomendable montar tu propio proxy (ver comentarios abajo)
+     Initialize App
   ----------------------------*/
-  const CORS_PROXIES = {
-    direct: '',
-    corsproxy: 'https://corsproxy.io/?',
-    allorigins: 'https://api.allorigins.win/raw?url=',
-    corsanywhere: 'https://cors-anywhere.herokuapp.com/',
-    thingproxy: 'https://thingproxy.freeboard.io/fetch/',
-    corscontainer: 'https://api.codetabs.com/v1/proxy?quest=',
-    crossorigin: 'https://crossorigin.me/',
-    corsbridge: 'https://corsbridge.org/',
-    custom: ''
-  };
-
-  /* ---------------------------
-     Init
-  ----------------------------*/
-  document.addEventListener('DOMContentLoaded', async () => {
-    await loadStateFromIDB();
+  async function init() {
+    // Load saved data
+    await loadPlaylists();
+    await loadFavorites();
+    await loadSettings();
+    renderPlaylists();
     setupEventListeners();
-    renderPlaylistsUI();
-    if (currentPlaylistId) {
-      const p = playlists.find(x => x.id === currentPlaylistId);
-      if (p) {
-        currentPlaylist = p.channels || [];
-        renderGroups(currentPlaylist);
+    showStatus('App initialized', 'success');
+  }
+
+  async function loadPlaylists() {
+    try {
+      const stored = await idbGetAll('playlists');
+      playlists = stored || [];
+    } catch (e) {
+      console.error('Error loading playlists:', e);
+      playlists = [];
+    }
+  }
+
+  async function loadFavorites() {
+    try {
+      const favs = await idbGet('favorites', 'favorites');
+      favorites = favs ? favs.value : [];
+    } catch (e) {
+      console.error('Error loading favorites:', e);
+      favorites = [];
+    }
+  }
+
+  async function loadSettings() {
+    try {
+      const settings = await idbGet('settings', 'customProxy');
+      customProxyUrl = settings ? settings.value : null;
+      if (customProxyUrl) {
+        customProxyUrlInput.value = customProxyUrl;
       }
-    }
-    // init custom proxy input if exists
-    const s = await idbGet('settings', 'customProxyUrl');
-    if (s && s.value) {
-      customProxyUrl = s.value;
-      CORS_PROXIES.custom = customProxyUrl;
-      customProxyUrlInput.value = customProxyUrl;
-    }
-  });
-
-  /* ---------------------------
-     Load/Save state in IDB
-  ----------------------------*/
-  async function loadStateFromIDB() {
-    playlists = await idbGetAll('playlists') || [];
-    // idbGetAll returns array of playlist objects
-    // Order newest first (id is timestamp)
-    playlists.sort((a,b)=>b.id - a.id);
-    const favRecord = await idbGet('favorites', 'favlist');
-    favorites = (favRecord && favRecord.channels) ? favRecord.channels : [];
-    // pick first playlist as current if not set
-    if (playlists.length > 0 && !currentPlaylistId) {
-      currentPlaylistId = playlists[0].id;
+    } catch (e) {
+      console.error('Error loading settings:', e);
     }
   }
 
-  async function savePlaylistsToIDB() {
-    // Save each playlist object individually
-    for (const pl of playlists) {
-      await idbPut('playlists', pl);
+  async function saveFavorites() {
+    try {
+      await idbPut('favorites', { key: 'favorites', value: favorites });
+    } catch (e) {
+      console.error('Error saving favorites:', e);
     }
   }
 
-  async function saveFavoritesToIDB() {
-    await idbPut('favorites', { key: 'favlist', channels: favorites });
-  }
-
-  async function saveSetting(key, value) {
-    await idbPut('settings', { key, value });
-  }
-
-  /* ---------------------------
-     Event listeners
-  ----------------------------*/
   function setupEventListeners() {
-    playBtn.addEventListener('click', playVideo);
-    pauseBtn.addEventListener('click', pauseVideo);
+    // Player controls
+    playBtn.addEventListener('click', () => videoPlayer.play());
+    pauseBtn.addEventListener('click', () => videoPlayer.pause());
     fullscreenBtn.addEventListener('click', toggleFullscreen);
-    qualitySelector.addEventListener('change', onQualityChange);
+    qualitySelector.addEventListener('change', changeQuality);
 
+    // Search
+    searchInput.addEventListener('input', debounce(handleSearch, 300));
+
+    // Upload
     uploadArea.addEventListener('click', () => fileInput.click());
-    uploadArea.addEventListener('keydown', e => { if (e.key === 'Enter') fileInput.click(); });
-    uploadBtn.addEventListener('click', () => fileInput.click());
-    addPlaylistBtn.addEventListener('click', () => fileInput.click());
-    fileInput.addEventListener('change', handleFileUpload);
+    uploadArea.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      uploadArea.style.borderColor = 'var(--primary)';
+    });
+    uploadArea.addEventListener('dragleave', () => {
+      uploadArea.style.borderColor = 'var(--primary)';
+    });
+    uploadArea.addEventListener('drop', (e) => {
+      e.preventDefault();
+      uploadArea.style.borderColor = 'var(--primary)';
+      const files = e.dataTransfer.files;
+      if (files.length > 0) {
+        handleFileUpload(files[0]);
+      }
+    });
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files.length > 0) {
+        handleFileUpload(e.target.files[0]);
+      }
+    });
 
-    addUrlModalBtn.addEventListener('click', openUrlModal);
+    // URL Modal
     addUrlBtn.addEventListener('click', openUrlModal);
-    closeUrlModal.addEventListener('click', closeUrlModalFn);
+    addUrlModalBtn.addEventListener('click', openUrlModal);
+    closeUrlModal.addEventListener('click', closeUrlModalHandler);
     loadUrlBtn.addEventListener('click', loadUrlPlaylist);
     testUrlBtn.addEventListener('click', testUrl);
-    saveCustomProxyBtn.addEventListener('click', saveCustomProxy);
-
-    document.querySelectorAll('input[name="proxyOption"]').forEach(radio => {
-      radio.addEventListener('change', function() {
-        if (this.value === 'custom') customProxySection.style.display = 'block';
-        else customProxySection.style.display = 'none';
-      });
+    proxyOptions.forEach(option => {
+      option.addEventListener('change', handleProxyOptionChange);
     });
+    saveCustomProxy.addEventListener('click', saveCustomProxyHandler);
 
-    window.addEventListener('click', (e) => {
-      if (e.target === urlModal) closeUrlModalFn();
-    });
-
-    searchInput.addEventListener('input', filterChannels);
-
+    // Categories
     categoryTabs.forEach(tab => {
       tab.addEventListener('click', () => {
         categoryTabs.forEach(t => t.classList.remove('active'));
         tab.classList.add('active');
         currentCategory = tab.dataset.category;
-        renderGroups(currentPlaylist);
+        renderGroups();
       });
-      tab.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') tab.click(); });
     });
 
-    document.addEventListener('keydown', globalKeyHandler);
-    uploadArea.addEventListener('dragover', handleDragOver);
-    uploadArea.addEventListener('drop', handleFileDrop);
+    // Playlist actions
+    addPlaylistBtn.addEventListener('click', () => fileInput.click());
+    uploadBtn.addEventListener('click', () => fileInput.click());
+
+    // Global click to close modals
+    window.addEventListener('click', (e) => {
+      if (e.target === urlModal) {
+        closeUrlModalHandler();
+      }
+    });
   }
 
   /* ---------------------------
-     Keyboard global handler
+     Playlist Management
   ----------------------------*/
-  function globalKeyHandler(e) {
-    if (e.code === 'Space' && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
-      e.preventDefault();
-      if (videoPlayer.paused) playVideo(); else pauseVideo();
+  function renderPlaylists() {
+    if (playlists.length === 0) {
+      emptyPlaylists.style.display = 'block';
+      playlistsGrid.innerHTML = '';
+      playlistsGrid.appendChild(emptyPlaylists);
+      return;
     }
-    if (e.code === 'KeyF' && document.activeElement.tagName !== 'INPUT') {
-      e.preventDefault();
-      toggleFullscreen();
-    }
-    if (e.key === 'Escape') {
-      if (urlModal.style.display === 'flex') closeUrlModalFn();
+
+    emptyPlaylists.style.display = 'none';
+    playlistsGrid.innerHTML = '';
+
+    playlists.forEach(playlist => {
+      const card = document.createElement('div');
+      card.className = 'playlist-card';
+      if (playlist.id === currentPlaylistId) {
+        card.classList.add('active');
+      }
+
+      const channelCount = playlist.channels ? playlist.channels.length : 0;
+      const groupCount = playlist.groups ? playlist.groups.length : 0;
+
+      card.innerHTML = `
+        <div class="playlist-icon">
+          <i class="fas fa-list" aria-hidden="true"></i>
+        </div>
+        <div class="playlist-info">
+          <h4>${playlist.name}</h4>
+          <p><i class="fas fa-tv" aria-hidden="true"></i> ${channelCount} channels</p>
+          <p><i class="fas fa-folder" aria-hidden="true"></i> ${groupCount} categories</p>
+          <p><i class="fas fa-calendar" aria-hidden="true"></i> ${new Date(playlist.id).toLocaleDateString()}</p>
+        </div>
+        <div class="playlist-actions">
+          <button class="btn btn-primary load-playlist" data-id="${playlist.id}"><i class="fas fa-play" aria-hidden="true"></i> Load</button>
+          <button class="btn btn-outline delete-playlist" data-id="${playlist.id}"><i class="fas fa-trash" aria-hidden="true"></i> Delete</button>
+        </div>
+      `;
+
+      playlistsGrid.appendChild(card);
+    });
+
+    // Add event listeners to playlist buttons
+    document.querySelectorAll('.load-playlist').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const id = e.target.closest('.load-playlist').dataset.id;
+        loadPlaylist(id);
+      });
+    });
+
+    document.querySelectorAll('.delete-playlist').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const id = e.target.closest('.delete-playlist').dataset.id;
+        deletePlaylist(id);
+      });
+    });
+  }
+
+  async function loadPlaylist(id) {
+    const playlist = playlists.find(p => p.id == id);
+    if (!playlist) return;
+
+    currentPlaylistId = id;
+    currentPlaylist = playlist.channels || [];
+    renderPlaylists();
+    renderGroups();
+    showStatus(`Loaded playlist: ${playlist.name}`, 'success');
+  }
+
+  async function deletePlaylist(id) {
+    if (!confirm('Are you sure you want to delete this playlist?')) return;
+
+    try {
+      await idbDelete('playlists', parseInt(id));
+      playlists = playlists.filter(p => p.id != id);
+      
+      if (currentPlaylistId == id) {
+        currentPlaylistId = null;
+        currentPlaylist = [];
+        groupsList.innerHTML = '';
+        channelsCount.textContent = '0 channels';
+        nowPlaying.textContent = 'Select a channel to start';
+      }
+      
+      renderPlaylists();
+      showStatus('Playlist deleted', 'success');
+    } catch (e) {
+      console.error('Error deleting playlist:', e);
+      showStatus('Error deleting playlist', 'error');
     }
   }
 
   /* ---------------------------
-     File upload / parsing M3U
+     File Upload & Parsing
   ----------------------------*/
-  function handleFileUpload(event) {
-    const file = event.target.files && event.target.files[0];
-    if (file) parseM3UFile(file);
-    // reset input so same file can be reselected
-    fileInput.value = '';
-  }
+  function handleFileUpload(file) {
+    if (!file) return;
 
-  function handleDragOver(e) { e.preventDefault(); uploadArea.style.backgroundColor = 'rgba(52,152,219,0.2)'; }
-  function handleFileDrop(e) {
-    e.preventDefault();
-    uploadArea.style.backgroundColor = '';
-    const files = e.dataTransfer.files;
-    if (files.length > 0) parseM3UFile(files[0]);
-  }
-
-  function parseM3UFile(file) {
     const reader = new FileReader();
     reader.onload = function(e) {
       const content = e.target.result;
-      const channels = parseM3UContent(content);
-      const newPlaylist = {
-        id: Date.now(),
-        name: file.name.replace('.m3u','').replace('.m3u8',''),
-        date: new Date().toLocaleDateString(),
-        channels: channels
-      };
-      playlists.unshift(newPlaylist);
-      // save each playlist individually to IDB
-      idbPut('playlists', newPlaylist).then(()=> {
-        showStatus(`Playlist "${newPlaylist.name}" loaded with ${channels.length} channels`, 'success');
-        currentPlaylistId = newPlaylist.id;
-        currentPlaylist = channels;
-        renderGroups(currentPlaylist);
-        renderPlaylistsUI();
-      }).catch(err => {
-        console.error('IDB save error:', err);
-        showStatus('Error saving playlist locally', 'error');
-      });
+      parsePlaylist(content, file.name);
     };
     reader.readAsText(file);
   }
 
-  function parseM3UContent(content) {
-    const lines = content.split(/\r?\n/);
+  function parsePlaylist(content, filename) {
+    showStatus('Parsing playlist...', 'warning');
+    
+    // Simple M3U parser
+    const lines = content.split('\n');
     const channels = [];
+    const groups = new Set();
     let currentChannel = null;
-    for (let i=0;i<lines.length;i++){
+
+    for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim();
-      if (!line) continue;
+      
       if (line.startsWith('#EXTINF:')) {
-        const info = line.substring(8);
-        // parse common attributes
-        const nameSplit = info.split(',');
-        const name = nameSplit.slice(1).join(',').trim() || `Channel ${channels.length+1}`;
-        currentChannel = {
-          id: Date.now() + channels.length, // unique-ish
-          name: name,
-          group: 'General',
-          url: '',
-          logo: 'https://via.placeholder.com/30x30/3498db/ffffff?text=TV',
-          resolution: 'HD',
-          isFavorite: false
-        };
-        const groupMatch = line.match(/group-title="([^"]*)"/i);
-        if (groupMatch) currentChannel.group = groupMatch[1];
-        const logoMatch = line.match(/tvg-logo="([^"]*)"/i);
-        if (logoMatch) currentChannel.logo = logoMatch[1];
-      } else if (line.startsWith('http') || line.startsWith('rtmp') || line.includes('://')) {
-        if (currentChannel) {
-          currentChannel.url = line;
-          channels.push(currentChannel);
-          currentChannel = null;
-        } else {
-          // In case file has raw URLs without EXTINF
-          channels.push({
-            id: Date.now() + channels.length,
-            name: `Channel ${channels.length+1}`,
+        // Parse EXTINF line
+        const match = line.match(/#EXTINF:(-?\d+)(?:\s+(.*))?,(.*)/);
+        if (match) {
+          currentChannel = {
+            id: channels.length,
+            name: match[3] || 'Unknown',
+            url: '',
             group: 'General',
-            url: line,
-            logo: 'https://via.placeholder.com/30x30/3498db/ffffff?text=TV',
-            resolution: 'HD',
-            isFavorite: false
-          });
+            tvg: {
+              id: '',
+              name: '',
+              logo: ''
+            }
+          };
+
+          // Parse attributes
+          const attrs = match[2] || '';
+          const logoMatch = attrs.match(/tvg-logo="([^"]*)"/);
+          if (logoMatch) currentChannel.tvg.logo = logoMatch[1];
+
+          const groupMatch = attrs.match(/group-title="([^"]*)"/);
+          if (groupMatch) currentChannel.group = groupMatch[1];
+
+          const idMatch = attrs.match(/tvg-id="([^"]*)"/);
+          if (idMatch) currentChannel.tvg.id = idMatch[1];
+
+          groups.add(currentChannel.group);
         }
+      } else if (line && !line.startsWith('#') && currentChannel) {
+        // This is the URL line
+        currentChannel.url = line;
+        channels.push(currentChannel);
+        currentChannel = null;
       }
     }
-    return channels;
-  }
 
-  /* ---------------------------
-     Render Playlists UI
-  ----------------------------*/
-  function renderPlaylistsUI() {
-    playlistsGrid.innerHTML = '';
-    if (playlists.length === 0) {
-      emptyPlaylists.classList.remove('hidden');
-      return;
-    }
-    emptyPlaylists.classList.add('hidden');
-
-    playlists.forEach(playlist => {
-      const card = document.createElement('div');
-      card.className = `playlist-card ${playlist.id === currentPlaylistId ? 'active' : ''}`;
-      card.innerHTML = `
-        <div class="playlist-icon"><i class="fas fa-list" aria-hidden="true"></i></div>
-        <div class="playlist-info">
-          <h4>${escapeHtml(playlist.name)}</h4>
-          <p>${playlist.channels.length} channels</p>
-          <p>Created: ${playlist.date}</p>
-        </div>
-        <div class="playlist-actions">
-          <button class="btn btn-primary load-pl" data-id="${playlist.id}">Load</button>
-          <button class="btn btn-outline edit-pl" data-id="${playlist.id}">Edit</button>
-          <button class="btn btn-outline del-pl" data-id="${playlist.id}">Delete</button>
-        </div>
-      `;
-      playlistsGrid.appendChild(card);
-
-      card.querySelector('.load-pl').addEventListener('click', () => loadPlaylist(playlist.id));
-      card.querySelector('.edit-pl').addEventListener('click', () => editPlaylistName(playlist.id));
-      card.querySelector('.del-pl').addEventListener('click', () => deletePlaylist(playlist.id));
-    });
-  }
-
-  function loadPlaylist(id) {
-    const pl = playlists.find(p => p.id === id);
-    if (!pl) return;
-    currentPlaylistId = pl.id;
-    currentPlaylist = pl.channels || [];
-    renderGroups(currentPlaylist);
-    renderPlaylistsUI();
-  }
-
-  function editPlaylistName(id) {
-    const pl = playlists.find(p=>p.id===id);
-    if (!pl) return;
-    const newName = prompt('Enter new name for the playlist:', pl.name);
-    if (newName) {
-      pl.name = newName;
-      idbPut('playlists', pl).then(()=> {
-        renderPlaylistsUI();
-        showStatus('Playlist renamed', 'success');
-      });
-    }
-  }
-
-  function deletePlaylist(id) {
-    if (!confirm('Are you sure you want to delete this playlist?')) return;
-    // delete from IDB and from array
-    idbDelete('playlists', id).then(()=> {
-      playlists = playlists.filter(p=>p.id!==id);
-      renderPlaylistsUI();
-      if (currentPlaylistId === id) {
-        currentPlaylist = [];
-        currentPlaylistId = playlists.length ? playlists[0].id : null;
-        if (currentPlaylistId) {
-          currentPlaylist = playlists.find(p=>p.id===currentPlaylistId).channels || [];
-        }
-        renderGroups(currentPlaylist);
-      }
-      showStatus('Playlist deleted', 'success');
-    }).catch(err=>{
-      console.error('Delete error', err);
-      showStatus('Error deleting playlist', 'error');
-    });
-  }
-
-  /* ---------------------------
-     Render groups and channels (paginated per group)
-     Strategy: For each group render first N channels and add "Load more" button to append next N.
-  ----------------------------*/
-  function renderGroups(channels) {
-    groupsList.innerHTML = '';
-    if (!channels || channels.length===0) {
-      groupsList.innerHTML = `
-        <div class="empty-state">
-          <i class="fas fa-broadcast-tower" aria-hidden="true"></i>
-          <h3>No channels loaded</h3>
-          <p>Upload an M3U playlist to see your channels here</p>
-        </div>
-      `;
-      channelsCount.textContent = '0 channels';
+    if (channels.length === 0) {
+      showStatus('No channels found in the playlist', 'error');
       return;
     }
 
-    // Filter by category
-    let filtered = channels;
-    if (currentCategory === 'favorites') {
-      filtered = channels.filter(ch => favorites.includes(ch.tempId || ch.id));
-    } else if (currentCategory !== 'all') {
-      filtered = channels.filter(ch => (ch.group || '').toLowerCase().includes(currentCategory));
-    }
+    // Create playlist object
+    const playlist = {
+      id: Date.now(),
+      name: filename.replace(/\.[^/.]+$/, ""), // Remove extension
+      channels: channels,
+      groups: Array.from(groups)
+    };
 
-    if (filtered.length === 0) {
-      groupsList.innerHTML = `
-        <div class="empty-state">
-          <i class="fas fa-filter" aria-hidden="true"></i>
-          <h3>No channels in this category</h3>
-          <p>Try selecting a different category</p>
-        </div>
-      `;
-      channelsCount.textContent = '0 channels';
-      return;
-    }
-
-    // Group by group-name
-    const groups = {};
-    filtered.forEach(ch => {
-      const g = ch.group || 'General';
-      if (!groups[g]) groups[g] = [];
-      groups[g].push(ch);
-    });
-
-    channelsCount.textContent = `${filtered.length} channel${filtered.length!==1?'s':''}`;
-
-    Object.keys(groups).forEach(groupName => {
-      const groupChannels = groups[groupName];
-      const groupItem = document.createElement('div');
-      groupItem.className = 'group-item';
-      groupItem.innerHTML = `
-        <div class="group-header" role="button" tabindex="0" aria-expanded="false">
-          <div class="group-name">${escapeHtml(groupName)}</div>
-          <div class="group-count">${groupChannels.length}</div>
-        </div>
-        <div class="channels-list"></div>
-      `;
-      const channelsListEl = groupItem.querySelector('.channels-list');
-
-      // Keep an internal pointer for pagination
-      let offset = 0;
-      function renderBatch() {
-        const slice = groupChannels.slice(offset, offset + CHANNEL_RENDER_BATCH);
-        slice.forEach(ch => {
-          const chEl = document.createElement('div');
-          chEl.className = 'channel-item';
-          chEl.tabIndex = 0;
-          chEl.innerHTML = `
-            <img src="${escapeHtml(ch.logo||'https://via.placeholder.com/30x30/3498db/ffffff?text=TV')}" alt="${escapeHtml(ch.name)}" class="channel-logo">
-            <div class="channel-info">
-              <div class="channel-name">${escapeHtml(ch.name)}</div>
-              <div class="channel-resolution">${escapeHtml(ch.resolution || 'HD')}</div>
-            </div>
-            <button class="favorite-btn ${favorites.includes(ch.tempId || ch.id) ? 'active' : ''}" data-id="${ch.tempId || ch.id}" aria-label="Toggle favorite">
-              <i class="${favorites.includes(ch.tempId || ch.id) ? 'fas' : 'far'} fa-heart" aria-hidden="true"></i>
-            </button>
-          `;
-          // click to play (unless favorite button clicked)
-          chEl.addEventListener('click', (e) => {
-            if (e.target.closest('.favorite-btn')) return;
-            playChannel(ch);
-            // mark active UI
-            channelsListEl.querySelectorAll('.channel-item.active').forEach(i=>i.classList.remove('active'));
-            chEl.classList.add('active');
-          });
-          chEl.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' || e.key === ' ') chEl.click();
-          });
-
-          // favorite toggle
-          const favBtn = chEl.querySelector('.favorite-btn');
-          favBtn.addEventListener('click', (ev) => {
-            ev.stopPropagation();
-            const cid = favBtn.dataset.id;
-            toggleFavorite(cid);
-            favBtn.classList.toggle('active');
-            favBtn.innerHTML = `<i class="${favorites.includes(cid) ? 'fas' : 'far'} fa-heart" aria-hidden="true"></i>`;
-          });
-
-          channelsListEl.appendChild(chEl);
-        });
-
-        offset += slice.length;
-        // add load more if remaining
-        const remaining = groupChannels.length - offset;
-        // remove existing load-more
-        const existingLoadMore = channelsListEl.querySelector('.load-more');
-        if (existingLoadMore) existingLoadMore.remove();
-        if (remaining > 0) {
-          const lm = document.createElement('button');
-          lm.className = 'btn btn-outline load-more';
-          lm.textContent = `Load more (${remaining})`;
-          lm.addEventListener('click', () => renderBatch());
-          channelsListEl.appendChild(lm);
-        }
-      }
-
-      // Expand/collapse group
-      const header = groupItem.querySelector('.group-header');
-      header.addEventListener('click', () => {
-        const isActive = groupItem.classList.toggle('active');
-        header.setAttribute('aria-expanded', isActive ? 'true' : 'false');
-        if (isActive && channelsListEl.children.length === 0) {
-          renderBatch();
-        }
-      });
-      header.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') header.click(); });
-
-      // Append group
-      groupsList.appendChild(groupItem);
-    });
+    // Save and load the playlist
+    savePlaylist(playlist);
   }
 
-  /* ---------------------------
-     Favorites handling
-  ----------------------------*/
-  async function toggleFavorite(channelId) {
-    const idx = favorites.indexOf(channelId);
-    if (idx > -1) favorites.splice(idx,1);
-    else favorites.push(channelId);
-    await saveFavoritesToIDB();
-  }
-
-  /* ---------------------------
-     Search/filter
-  ----------------------------*/
-  function filterChannels() {
-    const term = searchInput.value.trim().toLowerCase();
-    if (!term) {
-      renderGroups(currentPlaylist);
-      return;
-    }
-    const filtered = currentPlaylist.filter(ch => (ch.name || '').toLowerCase().includes(term));
-    renderGroups(filtered);
-  }
-
-  /* ---------------------------
-     Player & hls.js integration
-  ----------------------------*/
-  function playChannel(channel) {
-    nowPlaying.textContent = `Now Playing: ${channel.name}`;
-    if (hls) {
-      try { hls.destroy(); } catch(e){}
-      hls = null;
-    }
-    // Clean quality selector
-    populateQualitySelector([]);
-
-    // if HLS (.m3u8)
-    if (channel.url && channel.url.includes('.m3u8')) {
-      if (Hls.isSupported()) {
-        hls = new Hls({
-          // enable worker for performance
-          enableWorker: true,
-          // autoStartLoad true for autoplaying playlists
-          autoStartLoad: true
-        });
-        hls.loadSource(channel.url);
-        hls.attachMedia(videoPlayer);
-
-        hls.on(Hls.Events.MANIFEST_PARSED, function() {
-          // populate quality selector with available levels
-          const levels = hls.levels || [];
-          const qualities = levels.map(l => (l.height ? `${l.height}p` : `${l.bitrate || 'unknown'}bps`));
-          populateQualitySelector(qualities);
-          videoPlayer.play().catch(()=>{ /* ignore autoplay block */ });
-        });
-
-        // update selector if levels updated
-        hls.on(Hls.Events.LEVEL_UPDATED, () => {
-          const levels = hls.levels || [];
-          const qualities = levels.map(l => (l.height ? `${l.height}p` : `${l.bitrate || 'unknown'}bps`));
-          populateQualitySelector(qualities);
-        });
-
-        hls.on(Hls.Events.ERROR, function(event, data) {
-          console.warn('HLS error', data);
-          if (data.fatal) {
-            showStatus('Playback error: ' + data.type, 'error');
-            // attempt recover for network errors
-            try {
-              hls.recoverMediaError();
-            } catch(e){}
-          }
-        });
-      } else if (videoPlayer.canPlayType('application/vnd.apple.mpegurl')) {
-        // native HLS (Safari)
-        videoPlayer.src = channel.url;
-        videoPlayer.addEventListener('loadedmetadata', function() {
-          videoPlayer.play();
-        }, { once: true });
-      } else {
-        showStatus('HLS not supported in this browser', 'error');
-      }
-    } else {
-      // normal progressive stream
-      videoPlayer.src = channel.url;
-      videoPlayer.load();
-      videoPlayer.play().catch(()=>{});
-    }
-  }
-
-  function playVideo() { videoPlayer.play().catch(()=>{}); }
-  function pauseVideo() { videoPlayer.pause(); }
-  function toggleFullscreen() {
-    if (!document.fullscreenElement) {
-      videoPlayer.requestFullscreen().catch(err => console.log('Fullscreen error', err));
-    } else document.exitFullscreen();
-  }
-
-  /* Populate quality selector with levels; choose handler to set level */
-  function populateQualitySelector(qualities) {
-    // Clear existing, keep Auto option
-    qualitySelector.innerHTML = '<option value="auto">Auto</option>';
-    qualities.forEach((q, idx) => {
-      const opt = document.createElement('option');
-      opt.value = idx; // level index for hls
-      opt.textContent = q;
-      qualitySelector.appendChild(opt);
-    });
-    // show/hide selector based on availability
-    qualitySelector.style.display = qualities.length ? 'inline-block' : 'none';
-  }
-
-  function onQualityChange() {
-    const val = qualitySelector.value;
-    if (!hls) return;
-    if (val === 'auto') {
-      hls.currentLevel = -1; // auto
-      showStatus('Quality set to Auto', 'success');
-    } else {
-      const lvl = parseInt(val,10);
-      if (!isNaN(lvl)) {
-        hls.currentLevel = lvl;
-        showStatus('Quality changed', 'success');
-      }
-    }
-  }
-
-  /* ---------------------------
-     URL testing & loading (with proxy options)
-  ----------------------------*/
-  async function testUrl() {
-    const url = playlistUrl.value.trim();
-    if (!url) {
-      showInlineStatus('Please enter a URL', 'error', urlStatus);
-      return;
-    }
-    const proxyOption = document.querySelector('input[name="proxyOption"]:checked').value;
-    let testUrl = url;
+  async function savePlaylist(playlist) {
     try {
-      if (proxyOption !== 'direct') {
-        const proxyUrl = (proxyOption === 'custom') ? customProxyUrl : CORS_PROXIES[proxyOption];
-        if (!proxyUrl) throw new Error('Proxy URL not configured');
-        testUrl = proxyUrl + encodeURIComponent(url);
-      }
-      showInlineStatus('Testing URL...', 'warning', urlStatus);
-      testUrlBtn.disabled = true; loadUrlBtn.disabled = true;
-      const resp = await fetch(testUrl, { method: 'GET' });
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      showInlineStatus('✅ URL is accessible! You can now load the playlist.', 'success', urlStatus);
-    } catch (err) {
-      console.error('Test URL error', err);
-      showInlineStatus('❌ Failed to access URL: ' + (err.message || err), 'error', urlStatus);
-    } finally {
-      testUrlBtn.disabled = false; loadUrlBtn.disabled = false;
+      await idbPut('playlists', playlist);
+      playlists.push(playlist);
+      renderPlaylists();
+      loadPlaylist(playlist.id);
+      showStatus(`Playlist "${playlist.name}" loaded with ${playlist.channels.length} channels`, 'success');
+    } catch (e) {
+      console.error('Error saving playlist:', e);
+      showStatus('Error saving playlist', 'error');
+    }
+  }
+
+  /* ---------------------------
+     URL Playlist Loading
+  ----------------------------*/
+  function openUrlModal() {
+    urlModal.style.display = 'flex';
+    playlistUrl.focus();
+  }
+
+  function closeUrlModalHandler() {
+    urlModal.style.display = 'none';
+    urlStatus.innerHTML = '';
+  }
+
+  function handleProxyOptionChange(e) {
+    if (e.target.value === 'custom') {
+      customProxySection.style.display = 'block';
+    } else {
+      customProxySection.style.display = 'none';
+    }
+  }
+
+  async function saveCustomProxyHandler() {
+    const url = customProxyUrlInput.value.trim();
+    if (!url) {
+      showUrlStatus('Please enter a custom proxy URL', 'error');
+      return;
+    }
+
+    try {
+      await idbPut('settings', { key: 'customProxy', value: url });
+      customProxyUrl = url;
+      showUrlStatus('Custom proxy saved successfully', 'success');
+    } catch (e) {
+      console.error('Error saving custom proxy:', e);
+      showUrlStatus('Error saving custom proxy', 'error');
+    }
+  }
+
+  function getProxyUrl(url) {
+    const selectedProxy = document.querySelector('input[name="proxyOption"]:checked').value;
+    
+    if (selectedProxy === 'direct') return url;
+    
+    const encodedUrl = encodeURIComponent(url);
+    
+    switch (selectedProxy) {
+      case 'corsproxy':
+        return `https://corsproxy.io/?${encodedUrl}`;
+      case 'allorigins':
+        return `https://api.allorigins.win/raw?url=${encodedUrl}`;
+      case 'corsanywhere':
+        return `https://cors-anywhere.herokuapp.com/${url}`;
+      case 'thingproxy':
+        return `https://thingproxy.freeboard.io/fetch/${url}`;
+      case 'corscontainer':
+        return `https://api.codetabs.com/v1/proxy?quest=${url}`;
+      case 'crossorigin':
+        return `https://crossorigin.me/${url}`;
+      case 'corsbridge':
+        return `http://corsbridge.com/${url}`;
+      case 'custom':
+        return customProxyUrl ? customProxyUrl + encodedUrl : url;
+      default:
+        return url;
     }
   }
 
   async function loadUrlPlaylist() {
     const url = playlistUrl.value.trim();
     if (!url) {
-      showInlineStatus('Please enter a playlist URL', 'error', urlStatus);
+      showUrlStatus('Please enter a playlist URL', 'error');
       return;
     }
-    const proxyOption = document.querySelector('input[name="proxyOption"]:checked').value;
-    let fetchUrl = url;
+
+    showUrlStatus('Loading playlist...', 'warning');
+    
     try {
-      showInlineStatus('Loading playlist...', 'warning', urlStatus);
-      loadUrlBtn.disabled = true; testUrlBtn.disabled = true;
-      if (proxyOption !== 'direct') {
-        const proxyUrl = (proxyOption === 'custom') ? customProxyUrl : CORS_PROXIES[proxyOption];
-        if (!proxyUrl) throw new Error('Proxy URL not configured');
-        fetchUrl = proxyUrl + encodeURIComponent(url);
+      const proxyUrl = getProxyUrl(url);
+      const response = await fetch(proxyUrl);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
-      const resp = await fetch(fetchUrl);
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      const content = await resp.text();
-      if (!content.includes('#EXTM3U') && !content.includes('#EXTINF')) {
-        throw new Error('This does not appear to be a valid M3U playlist');
-      }
-      const channels = parseM3UContent(content);
-      const newPlaylist = {
-        id: Date.now(),
-        name: `Playlist from URL - ${new Date().toLocaleDateString()}`,
-        date: new Date().toLocaleDateString(),
-        channels
-      };
-      playlists.unshift(newPlaylist);
-      await idbPut('playlists', newPlaylist);
-      currentPlaylistId = newPlaylist.id;
-      currentPlaylist = channels;
-      renderGroups(currentPlaylist);
-      renderPlaylistsUI();
-      urlModal.style.display = 'none';
-      document.body.style.overflow = 'auto';
-      showStatus(`✅ Playlist loaded successfully with ${channels.length} channels`, 'success');
-    } catch (err) {
-      console.error('Load URL error', err);
-      showInlineStatus(`❌ Failed to load playlist: ${err.message}`, 'error', urlStatus);
-    } finally {
-      loadUrlBtn.disabled = false; testUrlBtn.disabled = false;
+      
+      const content = await response.text();
+      parsePlaylist(content, 'URL Playlist');
+      closeUrlModalHandler();
+    } catch (error) {
+      console.error('Error loading URL playlist:', error);
+      showUrlStatus(`Error: ${error.message}`, 'error');
     }
   }
 
-  /* ---------------------------
-     Custom proxy saving
-  ----------------------------*/
-  async function saveCustomProxy() {
-    const url = customProxyUrlInput.value.trim();
+  async function testUrl() {
+    const url = playlistUrl.value.trim();
     if (!url) {
-      showInlineStatus('Please enter a custom proxy URL', 'error', urlStatus);
+      showUrlStatus('Please enter a URL to test', 'error');
       return;
     }
-    customProxyUrl = url;
-    CORS_PROXIES.custom = url;
-    await saveSetting('customProxyUrl', url);
-    showInlineStatus('Custom proxy URL saved successfully', 'success', urlStatus);
+
+    showUrlStatus('Testing URL...', 'warning');
+    
+    try {
+      const proxyUrl = getProxyUrl(url);
+      const response = await fetch(proxyUrl);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      showUrlStatus('URL is accessible!', 'success');
+    } catch (error) {
+      console.error('Error testing URL:', error);
+      showUrlStatus(`Error: ${error.message}`, 'error');
+    }
+  }
+
+  function showUrlStatus(message, type) {
+    urlStatus.innerHTML = `<div class="status-${type} status-message"><i class="fas fa-${type === 'success' ? 'check' : type === 'warning' ? 'exclamation-triangle' : 'exclamation-circle'}" aria-hidden="true"></i> ${message}</div>`;
   }
 
   /* ---------------------------
-     Modal open/close
+     Groups & Channels Rendering
   ----------------------------*/
-  function openUrlModal() {
-    urlModal.style.display = 'flex';
-    urlModal.setAttribute('aria-hidden','false');
-    document.body.style.overflow = 'hidden';
-    playlistUrl.focus();
+  function renderGroups() {
+    if (!currentPlaylist || currentPlaylist.length === 0) {
+      groupsList.innerHTML = '<div class="empty-state"><i class="fas fa-tv" aria-hidden="true"></i><h3>No channels loaded</h3><p>Upload or load a playlist to get started</p></div>';
+      channelsCount.textContent = '0 channels';
+      return;
+    }
+
+    // Filter channels by category
+    let filteredChannels = currentPlaylist;
+    if (currentCategory === 'favorites') {
+      filteredChannels = currentPlaylist.filter(ch => favorites.includes(ch.id));
+    } else if (currentCategory !== 'all') {
+      filteredChannels = currentPlaylist.filter(ch => 
+        ch.group.toLowerCase().includes(currentCategory.toLowerCase())
+      );
+    }
+
+    // Apply search filter
+    const searchTerm = searchInput.value.toLowerCase().trim();
+    if (searchTerm) {
+      filteredChannels = filteredChannels.filter(ch => 
+        ch.name.toLowerCase().includes(searchTerm)
+      );
+    }
+
+    // Group channels
+    const groups = {};
+    filteredChannels.forEach(channel => {
+      if (!groups[channel.group]) {
+        groups[channel.group] = [];
+      }
+      groups[channel.group].push(channel);
+    });
+
+    // Render groups
+    groupsList.innerHTML = '';
+    
+    if (Object.keys(groups).length === 0) {
+      groupsList.innerHTML = '<div class="empty-state"><i class="fas fa-search" aria-hidden="true"></i><h3>No channels found</h3><p>Try changing your search or category</p></div>';
+      channelsCount.textContent = '0 channels';
+      return;
+    }
+
+    Object.keys(groups).forEach(groupName => {
+      const groupItem = document.createElement('div');
+      groupItem.className = 'group-item';
+      groupItem.innerHTML = `
+        <div class="group-header">
+          <div class="group-name">${groupName}</div>
+          <div class="group-count">${groups[groupName].length}</div>
+        </div>
+        <div class="channels-list"></div>
+      `;
+
+      const channelsList = groupItem.querySelector('.channels-list');
+      const channels = groups[groupName];
+      
+      // Render first batch of channels
+      renderChannelBatch(channelsList, channels, 0);
+      
+      // Add "Load more" if there are more channels
+      if (channels.length > CHANNEL_RENDER_BATCH) {
+        const loadMoreBtn = document.createElement('button');
+        loadMoreBtn.className = 'btn btn-outline';
+        loadMoreBtn.style.marginTop = '10px';
+        loadMoreBtn.style.width = '100%';
+        loadMoreBtn.textContent = `Load more (${channels.length - CHANNEL_RENDER_BATCH} remaining)`;
+        loadMoreBtn.addEventListener('click', () => {
+          loadMoreBtn.remove();
+          renderChannelBatch(channelsList, channels, CHANNEL_RENDER_BATCH);
+        });
+        channelsList.appendChild(loadMoreBtn);
+      }
+
+      groupsList.appendChild(groupItem);
+    });
+
+    // Add event listeners to groups
+    document.querySelectorAll('.group-item').forEach(item => {
+      item.addEventListener('click', (e) => {
+        if (!e.target.closest('.channel-item') && !e.target.closest('.favorite-btn')) {
+          document.querySelectorAll('.group-item').forEach(i => i.classList.remove('active'));
+          item.classList.add('active');
+        }
+      });
+    });
+
+    channelsCount.textContent = `${filteredChannels.length} channels`;
   }
-  function closeUrlModalFn() {
-    urlModal.style.display = 'none';
-    urlModal.setAttribute('aria-hidden','true');
-    document.body.style.overflow = 'auto';
+
+  function renderChannelBatch(container, channels, startIndex) {
+    const endIndex = Math.min(startIndex + CHANNEL_RENDER_BATCH, channels.length);
+    
+    for (let i = startIndex; i < endIndex; i++) {
+      const channel = channels[i];
+      const channelItem = document.createElement('div');
+      channelItem.className = 'channel-item';
+      channelItem.dataset.channelId = channel.id;
+      
+      const isFavorite = favorites.includes(channel.id);
+      
+      channelItem.innerHTML = `
+        <img src="${channel.tvg.logo || 'https://via.placeholder.com/30x30/2c3e50/ecf0f1?text=TV'}" alt="${channel.name} logo" class="channel-logo" onerror="this.src='https://via.placeholder.com/30x30/2c3e50/ecf0f1?text=TV'">
+        <div class="channel-info">
+          <div class="channel-name">${channel.name}</div>
+          <div class="channel-resolution">${channel.group}</div>
+        </div>
+        <button class="favorite-btn ${isFavorite ? 'active' : ''}" aria-label="${isFavorite ? 'Remove from favorites' : 'Add to favorites'}">
+          <i class="fas fa-heart" aria-hidden="true"></i>
+        </button>
+      `;
+
+      container.appendChild(channelItem);
+    }
+
+    // Add event listeners to channel items and favorite buttons
+    container.querySelectorAll('.channel-item').forEach(item => {
+      item.addEventListener('click', (e) => {
+        if (!e.target.closest('.favorite-btn')) {
+          playChannel(item.dataset.channelId);
+        }
+      });
+    });
+
+    container.querySelectorAll('.favorite-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleFavorite(btn.closest('.channel-item').dataset.channelId);
+      });
+    });
   }
 
   /* ---------------------------
-     Utility: show status
+     Channel Playback
   ----------------------------*/
-  function showStatus(message, type='success', timeout=4000) {
-    const el = document.createElement('div');
-    el.className = `status-message status-${type}`;
-    el.innerHTML = `<i class="fas fa-${type==='success'?'check-circle': type==='warning'?'exclamation-triangle':'exclamation-circle'}" aria-hidden="true"></i><span>${escapeHtml(message)}</span>`;
-    el.style.position = 'fixed'; el.style.top = '20px'; el.style.right = '20px'; el.style.zIndex = 1100; el.style.minWidth = '300px';
-    document.body.appendChild(el);
-    setTimeout(()=> el.remove(), timeout);
+  function playChannel(channelId) {
+    const channel = currentPlaylist.find(ch => ch.id == channelId);
+    if (!channel) return;
+
+    // Update UI
+    document.querySelectorAll('.channel-item').forEach(item => {
+      item.classList.remove('active');
+    });
+    document.querySelector(`.channel-item[data-channel-id="${channelId}"]`).classList.add('active');
+    
+    nowPlaying.textContent = `Now playing: ${channel.name}`;
+
+    // Stop previous HLS instance
+    if (hls) {
+      hls.destroy();
+      hls = null;
+    }
+
+    // Play the channel
+    if (Hls.isSupported()) {
+      hls = new Hls({
+        debug: false,
+        enableWorker: false,
+        lowLatencyMode: true,
+        backBufferLength: 90
+      });
+      
+      hls.loadSource(channel.url);
+      hls.attachMedia(videoPlayer);
+      
+      hls.on(Hls.Events.MANIFEST_PARSED, function() {
+        videoPlayer.play();
+        updateQualitySelector();
+      });
+      
+      hls.on(Hls.Events.ERROR, function(event, data) {
+        console.error('HLS Error:', data);
+        if (data.fatal) {
+          switch(data.type) {
+            case Hls.ErrorTypes.NETWORK_ERROR:
+              showStatus('Network error loading stream', 'error');
+              break;
+            case Hls.ErrorTypes.MEDIA_ERROR:
+              showStatus('Media error loading stream', 'error');
+              break;
+            default:
+              showStatus('Error loading stream', 'error');
+              break;
+          }
+        }
+      });
+    } else if (videoPlayer.canPlayType('application/vnd.apple.mpegurl')) {
+      // Safari native HLS support
+      videoPlayer.src = channel.url;
+      videoPlayer.play();
+    } else {
+      showStatus('HLS not supported in this browser', 'error');
+    }
   }
 
-  function showInlineStatus(message, type='success', container=urlStatus) {
-    container.innerHTML = '';
-    const s = document.createElement('div');
-    s.className = `status-message status-${type}`;
-    s.innerHTML = `<i class="fas fa-${type==='success'?'check-circle': type==='warning'?'exclamation-triangle':'exclamation-circle'}" aria-hidden="true"></i><span>${escapeHtml(message)}</span>`;
-    container.appendChild(s);
+  function updateQualitySelector() {
+    if (!hls) return;
+    
+    const levels = hls.levels;
+    qualitySelector.innerHTML = '<option value="auto">Auto</option>';
+    
+    levels.forEach((level, index) => {
+      const option = document.createElement('option');
+      option.value = index;
+      option.textContent = level.height ? `${level.height}p` : `Level ${index}`;
+      qualitySelector.appendChild(option);
+    });
+  }
+
+  function changeQuality() {
+    if (!hls) return;
+    
+    const quality = qualitySelector.value;
+    if (quality === 'auto') {
+      hls.currentLevel = -1;
+    } else {
+      hls.currentLevel = parseInt(quality);
+    }
   }
 
   /* ---------------------------
-     Escape HTML utility
+     Favorites Management
   ----------------------------*/
-  function escapeHtml(s){ return (s+'').replace(/[&<>"']/g, function(m){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]; }); }
-
-  /* ======================================================================
-     PROXY EXAMPLES (copy these to your server). They are comments in runtime
-     but here they are published for your convenience.
-
-     PHP proxy (simple):
-     -------------------
-     <?php
-     // proxy.php
-     if (!isset($_GET['url'])) { http_response_code(400); echo 'No url'; exit; }
-     $url = $_GET['url'];
-     header('Access-Control-Allow-Origin: *');
-     $ch = curl_init($url);
-     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-     curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-     curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (StreamTV Proxy)');
-     $resp = curl_exec($ch);
-     $info = curl_getinfo($ch);
-     http_response_code($info['http_code'] ?? 200);
-     foreach (['content-type','content-length'] as $h) {
-       if (!empty($info[$h])) header($h.': '.$info[$h]);
-     }
-     echo $resp;
-     ?>
-
-     Node.js (Express) example:
-     --------------------------
-     // proxy.js
-     const express = require('express');
-     const fetch = require('node-fetch'); // or undici
-     const app = express();
-     app.get('/proxy', async (req,res)=>{
-       const url = req.query.url;
-       if (!url) return res.status(400).send('No url');
-       try {
-         const r = await fetch(url, { headers: { 'User-Agent': 'StreamTV-Proxy' }});
-         r.headers.forEach((v,k)=> res.setHeader(k,v));
-         res.status(r.status);
-         r.body.pipe(res);
-       } catch(err){
-         res.status(502).send('Upstream error');
-       }
-     });
-     app.listen(3000);
-
-     IMPORTANT: Expose your proxy only to authorized users or add rate-limits and abuse protection.
-     ====================================================================== */
+  function toggleFavorite(channelId) {
+    const index = favorites.indexOf(parseInt(channelId));
+    const btn = document.querySelector(`.channel-item[data-channel-id="${channelId}"] .favorite-btn`);
+    
+    if (index > -1) {
+      // Remove from favorites
+      favorites.splice(index, 1);
+      btn.classList.remove('active');
+      btn.setAttribute('aria-label', 'Add to favorites');
+    } else {
+      // Add to favorites
+      favorites.push(parseInt(channelId));
+      btn.classList.add('active');
+      btn.setAttribute('aria-label', 'Remove from favorites');
+    }
+    
+    saveFavorites();
+    
+    // If we're in favorites category, update the view
+    if (currentCategory === 'favorites') {
+      renderGroups();
+    }
+  }
 
   /* ---------------------------
-     Small helper: sanitize for display in console/UI
+     Utility Functions
   ----------------------------*/
-  function safeLog(...args){ try { console.log(...args); } catch(e){} }
+  function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+      videoPlayer.requestFullscreen().catch(err => {
+        console.error('Error attempting to enable fullscreen:', err);
+      });
+    } else {
+      document.exitFullscreen();
+    }
+  }
 
-  /* Expose a quick debug method */
-  window.__streamtv_debug = { playlists, favorites };
+  function handleSearch() {
+    renderGroups();
+  }
+
+  function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+      const later = () => {
+        clearTimeout(timeout);
+        func(...args);
+      };
+      clearTimeout(timeout);
+      timeout = setTimeout(later, wait);
+    };
+  }
+
+  function showStatus(message, type) {
+    globalStatus.innerHTML = `<div class="status-${type} status-message"><i class="fas fa-${type === 'success' ? 'check' : type === 'warning' ? 'exclamation-triangle' : 'exclamation-circle'}" aria-hidden="true"></i> ${message}</div>`;
+    
+    // Auto-hide after 3 seconds
+    setTimeout(() => {
+      globalStatus.innerHTML = '';
+    }, 3000);
+  }
+
+  /* ---------------------------
+     Initialize when DOM is ready
+  ----------------------------*/
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
 
 })();
+
   </script>
 </body>
 </html>
