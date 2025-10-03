@@ -588,8 +588,20 @@
     let filtered = channels;
     if (currentCategory === 'favorites') {
       filtered = channels.filter(ch => favorites.has(ch.id));
+    } else if (currentCategory === 'movies') {
+      // Movies: filter by group name containing 'movies' or 'vod'
+      filtered = channels.filter(ch => {
+        const group = (ch.group || '').toLowerCase();
+        return group.includes('movies') || group.includes('vod');
+      });
+    } else if (currentCategory === 'series') {
+      // Series: filter by group name containing 'series' or 'srs'
+      filtered = channels.filter(ch => {
+        const group = (ch.group || '').toLowerCase();
+        return group.includes('series') || group.includes('srs');
+      });
     } else if (currentCategory !== 'all') {
-      // TV, Movies, Series: filter by group name (case-insensitive, partial match)
+      // TV: filter by group name (case-insensitive, partial match)
       filtered = channels.filter(ch => (ch.group || '').toLowerCase().includes(currentCategory));
     }
 
@@ -635,10 +647,7 @@
           chEl.className = 'channel-item';
           chEl.tabIndex = 0;
           chEl.dataset.channelId = ch.id;
-          
-          // VERIFICAR SI ES FAVORITO CORRECTAMENTE
           const isFavorite = favorites.has(ch.id);
-          
           chEl.innerHTML = `
             <img src="${escapeHtml(ch.logo||'https://via.placeholder.com/30x30/3498db/ffffff?text=TV')}" alt="${escapeHtml(ch.name)}" class="channel-logo">
             <div class="channel-info">
@@ -649,24 +658,20 @@
               <i class="${isFavorite ? 'fas' : 'far'} fa-heart" aria-hidden="true"></i>
             </button>
           `;
-          
           chEl.addEventListener('click', (e) => {
             if (e.target.closest('.favorite-btn')) return;
             playChannel(ch);
             channelsListEl.querySelectorAll('.channel-item.active').forEach(i=>i.classList.remove('active'));
             chEl.classList.add('active');
           });
-          
           chEl.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' || e.key === ' ') chEl.click();
           });
-
           const favBtn = chEl.querySelector('.favorite-btn');
           favBtn.addEventListener('click', (ev) => {
             ev.stopPropagation();
             toggleFavorite(ch.id, favBtn);
           });
-
           channelsListEl.appendChild(chEl);
         });
 
@@ -678,7 +683,10 @@
           const lm = document.createElement('button');
           lm.className = 'btn btn-outline load-more';
           lm.textContent = `Load more (${remaining})`;
-          lm.addEventListener('click', () => renderBatch());
+          lm.addEventListener('click', () => {
+            lm.disabled = true;
+            setTimeout(renderBatch, 10); // async batch for smoother UI
+          });
           channelsListEl.appendChild(lm);
         }
       }
@@ -688,7 +696,7 @@
         const isActive = groupItem.classList.toggle('active');
         header.setAttribute('aria-expanded', isActive ? 'true' : 'false');
         if (isActive && channelsListEl.children.length === 0) {
-          renderBatch();
+          setTimeout(renderBatch, 10); // async initial batch
         }
       });
       header.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') header.click(); });

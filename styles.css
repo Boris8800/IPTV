@@ -56,19 +56,23 @@ header {
   align-items: center; 
   gap: 8px;
   flex-shrink: 0;
+  overflow: hidden;
 }
 
 .logo i { 
   color: var(--primary); 
   font-size: 24px; 
+  max-height: 1em;
+  overflow: hidden;
+  vertical-align: middle;
 }
 
 .logo h1 { 
-  font-size: 18px; 
-  font-weight: 700; 
-  background: linear-gradient(to right, var(--primary), var(--accent)); 
-  -webkit-background-clip: text; 
-  background-clip: text; 
+  font-size: 18px;
+  font-weight: 700;
+  background: linear-gradient(to right, #09d1c8, var(--accent));
+  -webkit-background-clip: text;
+  background-clip: text;
   color: transparent;
   white-space: nowrap;
 }

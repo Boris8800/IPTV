@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Xtream Codes - IPTV Platform</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Cpath fill='%233498db' d='M502.63 233.37l-96-96a16 16 0 0 0-22.63 0l-96 96a16 16 0 0 0 0 22.63l96 96a16 16 0 0 0 22.63 0l96-96a16 16 0 0 0 0-22.63zm-130.91 130.91l-96-96a16 16 0 0 0-22.63 0l-96 96a16 16 0 0 0 0 22.63l96 96a16 16 0 0 0 22.63 0l96-96a16 16 0 0 0 0-22.63z'/%3E%3C/svg%3E">
     <style>
         :root {
             --primary: #3498db;
@@ -536,12 +537,8 @@
             const contentSection = document.getElementById('contentSection');
             const exportM3U = document.getElementById('exportM3U');
             const m3uInput = document.getElementById('m3uInput');
-            
-            // Tab elements
             const tabs = document.querySelectorAll('.tab');
             const tabContents = document.querySelectorAll('.tab-content');
-            
-            // Data storage
             let serverData = null;
             let liveStreams = [];
             let movies = [];
@@ -552,155 +549,101 @@
                 series: []
             };
 
-            // Event Listeners
-            connectBtn.addEventListener('click', connectToXtream);
-            exportM3U.addEventListener('click', exportM3UPlaylist);
-
-            // Tab switching
-            tabs.forEach(tab => {
-                tab.addEventListener('click', function() {
-                    // Update active tab
-                    tabs.forEach(t => t.classList.remove('active'));
-                    tabContents.forEach(c => c.classList.remove('active'));
-                    
-                    this.classList.add('active');
-                    document.getElementById(this.dataset.tab + 'Tab').classList.add('active');
-                    
-                    // Load content if needed
-                    const tabType = this.dataset.tab;
-                    if (tabType === 'movies' && movies.length === 0) {
-                        loadMovies();
-                    } else if (tabType === 'series' && series.length === 0) {
-                        loadSeries();
-                    }
-                });
-            });
-
-            // Main connection function
-            async function connectToXtream() {
+            connectBtn.addEventListener('click', async function() {
                 const url = serverUrl.value.trim();
                 const user = username.value.trim();
                 const pass = password.value.trim();
-
                 if (!url || !user || !pass) {
                     showStatus('Please complete all fields', 'error', connectionStatus);
                     return;
                 }
-
-                showStatus('Connecting to Xtream Codes...', 'warning', connectionStatus);
+                // Show loading spinner and message with rescan button
+                connectionStatus.innerHTML = `
+                  <div class="status-message status-warning" style="flex-direction:column;align-items:flex-start;">
+                    <span style="display:flex;align-items:center;">
+                      <span class="spinner"></span>
+                      <span style="margin-left:10px;">Loading Xtream Codes API, please wait...</span>
+                    </span>
+                    <button id="rescanBtn" class="btn btn-outline" style="margin-top:12px;">
+                      <i class="fas fa-sync-alt"></i> Rescan / Try Again
+                    </button>
+                  </div>
+                `;
                 connectBtn.disabled = true;
-
+                // Add event for rescan button
+                document.getElementById('rescanBtn').onclick = function() {
+                    connectBtn.disabled = false;
+                    connectionStatus.innerHTML = '';
+                };
                 try {
                     const baseUrl = url.replace(/\/+$/, '');
-                    
-                    // Test connection and get server info
+                    // Get server info
                     const serverInfoUrl = `${baseUrl}/player_api.php?username=${user}&password=${pass}&action=server_info`;
                     const serverResponse = await fetch(serverInfoUrl);
-                    
-                    if (!serverResponse.ok) {
-                        throw new Error(`Server error: ${serverResponse.status}`);
-                    }
-                    
+                    if (!serverResponse.ok) throw new Error(`Server error: ${serverResponse.status}`);
                     serverData = await serverResponse.json();
-                    
-                    if (serverData.user_info.auth === 0) {
-                        throw new Error('Invalid credentials - authentication failed');
-                    }
-
-                    // Display server information
+                    if (!serverData.user_info || serverData.user_info.auth === 0) throw new Error('Invalid credentials');
                     displayServerInfo(serverData);
-                    
-                    // Load all content
-                    await Promise.all([
-                        loadLiveStreams(user, pass, baseUrl),
-                        loadCategories(user, pass, baseUrl)
-                    ]);
-
-                    showStatus('Successfully connected to Xtream Codes', 'success', connectionStatus);
+                    // Show loading for categories
+                    connectionStatus.innerHTML = `
+                      <div class="status-message status-warning" style="flex-direction:column;align-items:flex-start;">
+                        <span style="display:flex;align-items:center;">
+                          <span class="spinner"></span>
+                          <span style="margin-left:10px;">Loading categories...</span>
+                        </span>
+                        <button id="rescanBtn" class="btn btn-outline" style="margin-top:12px;">
+                          <i class="fas fa-sync-alt"></i> Rescan / Try Again
+                        </button>
+                      </div>
+                    `;
+                    document.getElementById('rescanBtn').onclick = function() {
+                        connectBtn.disabled = false;
+                        connectionStatus.innerHTML = '';
+                    };
+                    await loadCategories(user, pass, baseUrl);
+                    // Show loading for live streams
+                    connectionStatus.innerHTML = `
+                      <div class="status-message status-warning" style="flex-direction:column;align-items:flex-start;">
+                        <span style="display:flex;align-items:center;">
+                          <span class="spinner"></span>
+                          <span style="margin-left:10px;">Loading live streams...</span>
+                        </span>
+                        <button id="rescanBtn" class="btn btn-outline" style="margin-top:12px;">
+                          <i class="fas fa-sync-alt"></i> Rescan / Try Again
+                        </button>
+                      </div>
+                    `;
+                    document.getElementById('rescanBtn').onclick = function() {
+                        connectBtn.disabled = false;
+                        connectionStatus.innerHTML = '';
+                    };
+                    await loadLiveStreams(user, pass, baseUrl);
                     serverInfoSection.classList.remove('hidden');
                     contentSection.classList.remove('hidden');
-                    
-                } catch (error) {
-                    console.error('Connection error:', error);
-                    showStatus(`Connection failed: ${error.message}`, 'error', connectionStatus);
+                    showStatus('Connected successfully', 'success', connectionStatus);
+                } catch (err) {
+                    showStatus('Connection failed: ' + err.message, 'error', connectionStatus);
+                    serverInfoSection.classList.add('hidden');
+                    contentSection.classList.add('hidden');
                 } finally {
                     connectBtn.disabled = false;
                 }
-            }
+            });
 
-            function displayServerInfo(data) {
-                const userInfo = data.user_info;
-                const serverInfoData = data.server_info;
-                
-                let html = `
-                    <div class="server-info">
-                        <h3><i class="fas fa-user"></i> User Information</h3>
-                        <div class="server-info-content">
-                            <div class="info-item">
-                                <span class="info-label">Username:</span>
-                                <span class="info-value">${userInfo.username}</span>
-                            </div>
-                            <div class="info-item">
-                                <span class="info-label">Status:</span>
-                                <span class="info-value" style="color: ${userInfo.status === 'Active' ? 'var(--success)' : 'var(--danger)'}">${userInfo.status}</span>
-                            </div>
-                            <div class="info-item">
-                                <span class="info-label">Expiration:</span>
-                                <span class="info-value">${userInfo.exp_date ? new Date(userInfo.exp_date * 1000).toLocaleDateString() : 'Never'}</span>
-                            </div>
-                            <div class="info-item">
-                                <span class="info-label">Max Connections:</span>
-                                <span class="info-value">${userInfo.max_connections}</span>
-                            </div>
-                `;
-
-                if (serverInfoData) {
-                    html += `
-                            <div class="info-item">
-                                <span class="info-label">Server URL:</span>
-                                <span class="info-value">${serverInfoData.url || 'N/A'}</span>
-                            </div>
-                            <div class="info-item">
-                                <span class="info-label">Port:</span>
-                                <span class="info-value">${serverInfoData.port || 'N/A'}</span>
-                            </div>
-                            <div class="info-item">
-                                <span class="info-label">Version:</span>
-                                <span class="info-value">${serverInfoData.version || 'N/A'}</span>
-                            </div>
-                    `;
-                }
-
-                html += `
-                        </div>
-                    </div>
-                `;
-
-                serverInfo.innerHTML = html;
-            }
-
-            async function loadCategories(username, password, baseUrl) {
+            async function loadCategories(user, pass, baseUrl) {
                 try {
-                    // Load live categories
-                    const liveCategoriesUrl = `${baseUrl}/player_api.php?username=${username}&password=${password}&action=get_live_categories`;
-                    const liveResponse = await fetch(liveCategoriesUrl);
-                    categories.live = await liveResponse.json();
-
-                    // Load VOD categories
-                    const vodCategoriesUrl = `${baseUrl}/player_api.php?username=${username}&password=${password}&action=get_vod_categories`;
-                    const vodResponse = await fetch(vodCategoriesUrl);
-                    categories.movies = await vodResponse.json();
-
-                    // Load series categories
-                    const seriesCategoriesUrl = `${baseUrl}/player_api.php?username=${username}&password=${password}&action=get_series_categories`;
-                    const seriesResponse = await fetch(seriesCategoriesUrl);
-                    categories.series = await seriesResponse.json();
-
-                    // Display categories filters
+                    // Live
+                    const liveCatUrl = `${baseUrl}/player_api.php?username=${user}&password=${pass}&action=get_live_categories`;
+                    categories.live = await (await fetch(liveCatUrl)).json();
+                    // Movies
+                    const vodCatUrl = `${baseUrl}/player_api.php?username=${user}&password=${pass}&action=get_vod_categories`;
+                    categories.movies = await (await fetch(vodCatUrl)).json();
+                    // Series
+                    const seriesCatUrl = `${baseUrl}/player_api.php?username=${user}&password=${pass}&action=get_series_categories`;
+                    categories.series = await (await fetch(seriesCatUrl)).json();
                     displayCategoriesFilters();
-
-                } catch (error) {
-                    console.error('Error loading categories:', error);
+                } catch (err) {
+                    showStatus('Error loading categories', 'error', connectionStatus);
                 }
             }
 
@@ -763,16 +706,12 @@
                 displayContent(filtered, container, type);
             }
 
-            async function loadLiveStreams(username, password, baseUrl) {
+            async function loadLiveStreams(user, pass, baseUrl) {
                 try {
-                    const streamsUrl = `${baseUrl}/player_api.php?username=${username}&password=${password}&action=get_live_streams`;
-                    const response = await fetch(streamsUrl);
-                    liveStreams = await response.json();
-                    
+                    const streamsUrl = `${baseUrl}/player_api.php?username=${user}&password=${pass}&action=get_live_streams`;
+                    liveStreams = await (await fetch(streamsUrl)).json();
                     displayContent(liveStreams, document.getElementById('liveChannels'), 'live');
-                    
-                } catch (error) {
-                    console.error('Error loading live streams:', error);
+                } catch (err) {
                     showStatus('Error loading live streams', 'error', connectionStatus);
                 }
             }
@@ -782,15 +721,10 @@
                     const baseUrl = serverUrl.value.replace(/\/+$/, '');
                     const user = username.value.trim();
                     const pass = password.value.trim();
-                    
                     const moviesUrl = `${baseUrl}/player_api.php?username=${user}&password=${pass}&action=get_vod_streams`;
-                    const response = await fetch(moviesUrl);
-                    movies = await response.json();
-                    
+                    movies = await (await fetch(moviesUrl)).json();
                     displayContent(movies, document.getElementById('moviesList'), 'movies');
-                    
-                } catch (error) {
-                    console.error('Error loading movies:', error);
+                } catch (err) {
                     showStatus('Error loading movies', 'error', connectionStatus);
                 }
             }
@@ -800,17 +734,74 @@
                     const baseUrl = serverUrl.value.replace(/\/+$/, '');
                     const user = username.value.trim();
                     const pass = password.value.trim();
-                    
                     const seriesUrl = `${baseUrl}/player_api.php?username=${user}&password=${pass}&action=get_series`;
-                    const response = await fetch(seriesUrl);
-                    series = await response.json();
-                    
+                    series = await (await fetch(seriesUrl)).json();
                     displayContent(series, document.getElementById('seriesList'), 'series');
-                    
-                } catch (error) {
-                    console.error('Error loading series:', error);
+                } catch (err) {
                     showStatus('Error loading series', 'error', connectionStatus);
                 }
+            }
+
+            tabs.forEach(tab => {
+                tab.addEventListener('click', function() {
+                    tabs.forEach(t => t.classList.remove('active'));
+                    tabContents.forEach(c => c.classList.remove('active'));
+                    this.classList.add('active');
+                    document.getElementById(this.dataset.tab + 'Tab').classList.add('active');
+                    if (this.dataset.tab === 'movies' && movies.length === 0) loadMovies();
+                    if (this.dataset.tab === 'series' && series.length === 0) loadSeries();
+                });
+            });
+
+            function displayServerInfo(data) {
+                const userInfo = data.user_info;
+                const serverInfoData = data.server_info;
+                
+                let html = `
+                    <div class="server-info">
+                        <h3><i class="fas fa-user"></i> User Information</h3>
+                        <div class="server-info-content">
+                            <div class="info-item">
+                                <span class="info-label">Username:</span>
+                                <span class="info-value">${userInfo.username}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Status:</span>
+                                <span class="info-value" style="color: ${userInfo.status === 'Active' ? 'var(--success)' : 'var(--danger)'}">${userInfo.status}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Expiration:</span>
+                                <span class="info-value">${userInfo.exp_date ? new Date(userInfo.exp_date * 1000).toLocaleDateString() : 'Never'}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Max Connections:</span>
+                                <span class="info-value">${userInfo.max_connections}</span>
+                            </div>
+                `;
+
+                if (serverInfoData) {
+                    html += `
+                            <div class="info-item">
+                                <span class="info-label">Server URL:</span>
+                                <span class="info-value">${serverInfoData.url || 'N/A'}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Port:</span>
+                                <span class="info-value">${serverInfoData.port || 'N/A'}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Version:</span>
+                                <span class="info-value">${serverInfoData.version || 'N/A'}</span>
+                            </div>
+                    `;
+                }
+
+                html += `
+                        </div>
+                    </div>
+                `;
+
+                serverInfo.innerHTML = html;
             }
 
             function displayContent(items, container, type) {
@@ -843,6 +834,13 @@
                 });
 
                 container.innerHTML = html;
+            }
+
+            function showStatus(message, type, container) {
+                container.innerHTML = `<div class="status-${type} status-message">
+                    <i class="fas fa-${type === 'success' ? 'check' : type === 'warning' ? 'exclamation-triangle' : 'exclamation-circle'}"></i>
+                    <span>${message}</span>
+                </div>`;
             }
 
             // M3U upload handler
@@ -913,7 +911,6 @@
                 if (type === 'live' && item.stream_id && item.stream_id.startsWith('http')) {
                     return item.stream_id;
                 }
-                // ...existing code...
                 const baseUrl = serverUrl.value.replace(/\/+$/, '');
                 const user = username.value.trim();
                 const pass = password.value.trim();
@@ -967,16 +964,6 @@
                 
                 showStatus(`Playing: ${streamName}`, 'success', connectionStatus);
             }
-
-            function showStatus(message, type, container) {
-                container.innerHTML = `<div class="status-${type} status-message">
-                    <i class="fas fa-${type === 'success' ? 'check' : type === 'warning' ? 'exclamation-triangle' : 'exclamation-circle'}"></i>
-                    <span>${message}</span>
-                </div>`;
-            }
-
-            // Make playStream available globally
-            window.playStream = playStream;
 
             // Example data for testing (remove in production)
             serverUrl.value = 'http://your-server.com:8080';
