@@ -706,7 +706,7 @@ header {
 }
 
 .group-item.active { 
-  background: var(--primary); 
+  background: #2980b952;
 }
 
 .group-header { 
@@ -804,24 +804,21 @@ header {
   align-items: center; 
   gap: 10px; 
   font-size: 14px; 
+  background: rgb(13 55 31);
+  border-left: 4px solid #21d16c;
+  color: #fdebd0;
 }
 
-.status-success { 
-  background: rgba(46,204,113,0.2); 
-  border-left: 4px solid var(--success); 
-  color: #d1f7e5; 
-}
-
+/* Removed empty .status-success ruleset */
 .status-error { 
   background: rgba(231,76,60,0.2); 
   border-left: 4px solid var(--danger); 
   color: #fadbd8; 
 }
-
 .status-warning { 
-  background: rgba(243,156,18,0.2); 
-  border-left: 4px solid var(--warning); 
-  color: #fdebd0; 
+  background: rgb(12 41 24);
+  border-left: 4px solid var(--success);
+  color: #fdebd0;
 }
 
 /* --- MEDIA QUERIES MEJORADAS --- */

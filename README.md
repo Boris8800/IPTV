@@ -15,4 +15,4 @@ It allows you to load an IPTV playlist (M3U) through a secure proxy (PHP) and pl
 
 ---
 
-
+## 📂 Project Structure

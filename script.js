@@ -208,8 +208,7 @@
     const xtreamModalBtn = document.getElementById('xtreamModalBtn');
     if (xtreamModalBtn) {
       xtreamModalBtn.addEventListener('click', () => {
-        // Redirect to xtream.html or show Xtream modal
-        window.location.href = 'xtream.html';
+        window.open('xtream.html', '_blank');
       });
     }
 
@@ -844,7 +843,10 @@
     let testUrl = url;
     try {
       if (proxyOption !== 'direct') {
-        const proxyUrl = (proxyOption === 'custom') ? customProxyUrl : CORS_PROXIES[proxyOption];
+        // Always use the latest custom proxy value from input
+        const proxyUrl = (proxyOption === 'custom')
+          ? customProxyUrlInput.value.trim()
+          : CORS_PROXIES[proxyOption];
         if (!proxyUrl) throw new Error('Proxy URL not configured');
         testUrl = proxyUrl + encodeURIComponent(url);
       }
@@ -873,7 +875,10 @@
       showInlineStatus('Loading playlist...', 'warning', urlStatus);
       loadUrlBtn.disabled = true; testUrlBtn.disabled = true;
       if (proxyOption !== 'direct') {
-        const proxyUrl = (proxyOption === 'custom') ? customProxyUrl : CORS_PROXIES[proxyOption];
+        // Always use the latest custom proxy value from input
+        const proxyUrl = (proxyOption === 'custom')
+          ? customProxyUrlInput.value.trim()
+          : CORS_PROXIES[proxyOption];
         if (!proxyUrl) throw new Error('Proxy URL not configured');
         fetchUrl = proxyUrl + encodeURIComponent(url);
       }
