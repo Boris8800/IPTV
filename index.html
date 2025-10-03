@@ -1,1644 +1,1249 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>StreamTV - Complete IPTV Platform</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-    <style>
-        :root {
-            --primary: #3498db;
-            --primary-dark: #2980b9;
-            --secondary: #2c3e50;
-            --accent: #e74c3c;
-            --light: #ecf0f1;
-            --dark: #1a1a2e;
-            --gray: #95a5a6;
-            --success: #2ecc71;
-            --warning: #f39c12;
-            --danger: #e74c3c;
-            --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            --transition: all 0.3s ease;
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-
-        body {
-            background-color: var(--dark);
-            color: var(--light);
-            line-height: 1.6;
-            overflow-x: hidden;
-        }
-
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 0 20px;
-        }
-
-        /* Header Styles */
-        header {
-            background-color: var(--secondary);
-            padding: 15px 0;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            box-shadow: var(--shadow);
-        }
-
-        .header-content {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .logo {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .logo i {
-            color: var(--primary);
-            font-size: 28px;
-        }
-
-        .logo h1 {
-            font-size: 24px;
-            font-weight: 700;
-            background: linear-gradient(to right, var(--primary), var(--accent));
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-        }
-
-        .nav-links {
-            display: flex;
-            list-style: none;
-            gap: 25px;
-        }
-
-        .nav-links a {
-            color: var(--light);
-            text-decoration: none;
-            font-weight: 500;
-            transition: var(--transition);
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-
-        .nav-links a:hover {
-            color: var(--primary);
-        }
-
-        .nav-links a.active {
-            color: var(--primary);
-        }
-
-        .user-actions {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .btn {
-            padding: 8px 16px;
-            border-radius: 4px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: var(--transition);
-            border: none;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .btn-primary {
-            background-color: var(--primary);
-            color: white;
-        }
-
-        .btn-primary:hover {
-            background-color: var(--primary-dark);
-        }
-
-        .btn-outline {
-            background-color: transparent;
-            border: 1px solid var(--primary);
-            color: var(--primary);
-        }
-
-        .btn-outline:hover {
-            background-color: var(--primary);
-            color: white;
-        }
-
-        .search-bar {
-            display: flex;
-            align-items: center;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 4px;
-            padding: 8px 15px;
-            width: 300px;
-        }
-
-        .search-bar input {
-            background: transparent;
-            border: none;
-            color: var(--light);
-            width: 100%;
-            padding: 5px;
-            outline: none;
-        }
-
-        .search-bar i {
-            color: var(--gray);
-        }
-
-        /* Login Modal */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.8);
-            z-index: 1000;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .modal-content {
-            background: var(--secondary);
-            padding: 30px;
-            border-radius: 8px;
-            width: 90%;
-            max-width: 400px;
-            max-height: 80vh;
-            overflow-y: auto;
-        }
-
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-
-        .modal-header h3 {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .close-modal {
-            background: none;
-            border: none;
-            color: var(--light);
-            font-size: 24px;
-            cursor: pointer;
-        }
-
-        .login-form {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-
-        .form-group {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .form-group label {
-            font-weight: 500;
-        }
-
-        .form-group input {
-            padding: 12px;
-            border-radius: 4px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            background: rgba(255, 255, 255, 0.1);
-            color: var(--light);
-            font-size: 16px;
-        }
-
-        .form-group input:focus {
-            outline: none;
-            border-color: var(--primary);
-        }
-
-        .login-options {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: 10px;
-        }
-
-        .remember-me {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .forgot-password {
-            color: var(--primary);
-            text-decoration: none;
-            font-size: 14px;
-        }
-
-        /* Main Content Layout */
-        .main-content {
-            display: grid;
-            grid-template-columns: 400px 1fr; /* Wider channels sidebar */
-            gap: 20px;
-            padding: 20px 0;
-            min-height: calc(100vh - 140px);
-        }
-
-        /* Channels Sidebar - Made wider and same height as video player */
-        .channels-sidebar {
-            background-color: rgba(0, 0, 0, 0.3);
-            border-radius: 8px;
-            padding: 20px;
-            overflow-y: auto;
-            height: calc(100vh - 160px);
-            display: flex;
-            flex-direction: column;
-        }
-
-        .sidebar-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            flex-shrink: 0;
-        }
-
-        .sidebar-header h3 {
-            font-size: 18px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .category-tabs {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 15px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            padding-bottom: 10px;
-            flex-shrink: 0;
-            flex-wrap: wrap;
-        }
-
-        .category-tab {
-            padding: 8px 15px;
-            border-radius: 20px;
-            font-size: 13px;
-            cursor: pointer;
-            transition: var(--transition);
-            background: rgba(255, 255, 255, 0.05);
-        }
-
-        .category-tab.active {
-            background: var(--primary);
-        }
-
-        .groups-list {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            overflow-y: auto;
-            flex: 1;
-        }
-
-        .group-item {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 6px;
-            padding: 12px;
-            cursor: pointer;
-            transition: var(--transition);
-        }
-
-        .group-item:hover {
-            background: rgba(255, 255, 255, 0.1);
-        }
-
-        .group-item.active {
-            background: var(--primary);
-        }
-
-        .group-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .group-name {
-            font-weight: 600;
-            font-size: 14px;
-        }
-
-        .group-count {
-            background: rgba(255, 255, 255, 0.2);
-            padding: 2px 8px;
-            border-radius: 12px;
-            font-size: 12px;
-        }
-
-        .channels-list {
-            margin-top: 10px;
-            display: none;
-        }
-
-        .group-item.active .channels-list {
-            display: block;
-        }
-
-        .channel-item {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 8px;
-            border-radius: 4px;
-            margin-bottom: 5px;
-            cursor: pointer;
-            transition: var(--transition);
-        }
-
-        .channel-item:hover {
-            background: rgba(255, 255, 255, 0.1);
-        }
-
-        .channel-item.active {
-            background: var(--primary);
-        }
-
-        .channel-logo {
-            width: 30px;
-            height: 30px;
-            border-radius: 4px;
-            object-fit: cover;
-        }
-
-        .channel-info {
-            flex: 1;
-            min-width: 0;
-        }
-
-        .channel-name {
-            font-size: 13px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .channel-resolution {
-            font-size: 11px;
-            color: var(--gray);
-        }
-
-        .favorite-btn {
-            background: none;
-            border: none;
-            color: var(--gray);
-            cursor: pointer;
-            font-size: 14px;
-            transition: var(--transition);
-            padding: 4px;
-        }
-
-        .favorite-btn.active {
-            color: var(--accent);
-        }
-
-        /* Player Section */
-        .player-section {
-            background-color: rgba(0, 0, 0, 0.3);
-            border-radius: 8px;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            height: calc(100vh - 160px);
-        }
-
-        .player-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-
-        .player-header h3 {
-            font-size: 20px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .now-playing {
-            font-size: 14px;
-            color: var(--gray);
-        }
-
-        .video-container {
-            position: relative;
-            width: 100%;
-            flex: 1;
-            background-color: #000;
-            border-radius: 8px;
-            overflow: hidden;
-            margin-bottom: 20px;
-        }
-
-        #videoPlayer {
-            width: 100%;
-            height: 100%;
-            background-color: #000;
-        }
-
-        .player-controls {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-shrink: 0;
-        }
-
-        .control-group {
-            display: flex;
-            gap: 10px;
-        }
-
-        .control-btn {
-            background: rgba(255, 255, 255, 0.1);
-            border: none;
-            color: white;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: var(--transition);
-        }
-
-        .control-btn:hover {
-            background: rgba(255, 255, 255, 0.2);
-        }
-
-        .quality-selector {
-            background: rgba(255, 255, 255, 0.1);
-            border: none;
-            color: white;
-            padding: 8px 15px;
-            border-radius: 4px;
-        }
-
-        /* Playlists Section */
-        .playlists-section {
-            background-color: rgba(0, 0, 0, 0.3);
-            border-radius: 8px;
-            padding: 20px;
-            margin-top: 20px;
-        }
-
-        .section-title {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-
-        .section-title h2 {
-            font-size: 28px;
-            margin-bottom: 10px;
-            color: var(--light);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-        }
-
-        .section-title p {
-            color: var(--gray);
-            max-width: 600px;
-            margin: 0 auto;
-        }
-
-        .playlists-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-
-        .playlist-card {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 8px;
-            padding: 20px;
-            transition: var(--transition);
-            cursor: pointer;
-        }
-
-        .playlist-card:hover {
-            transform: translateY(-5px);
-            box-shadow: var(--shadow);
-        }
-
-        .playlist-card.active {
-            border: 2px solid var(--primary);
-        }
-
-        .playlist-icon {
-            font-size: 40px;
-            color: var(--primary);
-            margin-bottom: 15px;
-            text-align: center;
-        }
-
-        .playlist-info h4 {
-            margin-bottom: 10px;
-            font-size: 18px;
-        }
-
-        .playlist-info p {
-            color: var(--gray);
-            font-size: 14px;
-            margin-bottom: 5px;
-        }
-
-        .playlist-actions {
-            display: flex;
-            gap: 10px;
-            margin-top: 15px;
-        }
-
-        .playlist-actions .btn {
-            flex: 1;
-            justify-content: center;
-            padding: 6px 12px;
-            font-size: 12px;
-        }
-
-        /* Upload Section */
-        .upload-section {
-            background-color: rgba(0, 0, 0, 0.3);
-            border-radius: 8px;
-            padding: 30px;
-            margin-top: 20px;
-        }
-
-        .upload-area {
-            border: 2px dashed var(--primary);
-            border-radius: 8px;
-            padding: 40px;
-            text-align: center;
-            margin-bottom: 20px;
-            transition: var(--transition);
-            cursor: pointer;
-        }
-
-        .upload-area:hover {
-            background-color: rgba(52, 152, 219, 0.1);
-        }
-
-        .upload-area i {
-            font-size: 50px;
-            color: var(--primary);
-            margin-bottom: 15px;
-        }
-
-        .upload-area h3 {
-            margin-bottom: 10px;
-        }
-
-        .upload-area p {
-            color: var(--gray);
-            margin-bottom: 15px;
-        }
-
-        .formats-list {
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-            margin-top: 20px;
-            flex-wrap: wrap;
-        }
-
-        .format-tag {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 5px 15px;
-            border-radius: 20px;
-            font-size: 14px;
-        }
-
-        .playlist-actions-main {
-            display: flex;
-            gap: 15px;
-            justify-content: center;
-        }
-
-        /* URL Input Modal */
-        .url-modal-content {
-            background: var(--secondary);
-            padding: 30px;
-            border-radius: 8px;
-            width: 90%;
-            max-width: 500px;
-            max-height: 70vh;
-            overflow-y: auto;
-        }
-
-        .url-input-group {
-            margin-bottom: 20px;
-        }
-
-        .url-input-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 500;
-        }
-
-        .url-input-group input {
-            width: 100%;
-            padding: 12px;
-            border-radius: 4px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            background: rgba(255, 255, 255, 0.1);
-            color: var(--light);
-            font-size: 16px;
-        }
-
-        .url-input-group input:focus {
-            outline: none;
-            border-color: var(--primary);
-        }
-
-        .proxy-options {
-            margin-bottom: 20px;
-        }
-
-        .proxy-options label {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 10px;
-            cursor: pointer;
-            padding: 8px;
-            border-radius: 4px;
-            transition: var(--transition);
-        }
-
-        .proxy-options label:hover {
-            background: rgba(255, 255, 255, 0.05);
-        }
-
-        .proxy-options input[type="radio"] {
-            margin: 0;
-        }
-
-        .url-help {
-            background: rgba(255, 255, 255, 0.05);
-            padding: 15px;
-            border-radius: 4px;
-            margin-bottom: 20px;
-            font-size: 14px;
-        }
-
-        .url-help h4 {
-            margin-bottom: 8px;
-            color: var(--primary);
-        }
-
-        .url-help ul {
-            list-style: none;
-            padding-left: 0;
-        }
-
-        .url-help li {
-            margin-bottom: 5px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .url-help li i {
-            color: var(--success);
-            font-size: 12px;
-        }
-
-        /* Responsive Design */
-        @media (max-width: 1024px) {
-            .main-content {
-                grid-template-columns: 1fr;
-            }
-            
-            .channels-sidebar {
-                height: auto;
-                max-height: 400px;
-            }
-
-            .player-section {
-                height: auto;
-            }
-        }
-
-        @media (max-width: 768px) {
-            .nav-links {
-                display: none;
-            }
-
-            .search-bar {
-                width: 200px;
-            }
-
-            .playlist-actions-main {
-                flex-direction: column;
-                align-items: center;
-            }
-
-            .playlists-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .proxy-options label {
-                font-size: 14px;
-            }
-
-            .category-tabs {
-                flex-direction: column;
-            }
-        }
-
-        /* Loading Spinner */
-        .spinner {
-            border: 4px solid rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            border-top: 4px solid var(--primary);
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 20px auto;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .hidden {
-            display: none;
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 40px;
-            color: var(--gray);
-        }
-
-        .empty-state i {
-            font-size: 60px;
-            margin-bottom: 20px;
-            color: var(--primary);
-        }
-    </style>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>StreamTV - Complete IPTV Platform (Enhanced)</title>
+
+  <!-- FontAwesome y hls.js siguen desde CDN como en tu original -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+
+  <style>
+    /* --- Mantengo exactamente los estilos visuales que tenías --- */
+    :root {
+      --primary: #3498db;
+      --primary-dark: #2980b9;
+      --secondary: #2c3e50;
+      --accent: #e74c3c;
+      --light: #ecf0f1;
+      --dark: #1a1a2e;
+      --gray: #95a5a6;
+      --success: #2ecc71;
+      --warning: #f39c12;
+      --danger: #e74c3c;
+      --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      --transition: all 0.3s ease;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body { background-color: var(--dark); color: var(--light); line-height: 1.6; overflow-x: hidden; }
+    .container { max-width: 1400px; margin: 0 auto; padding: 0 20px; }
+
+    header { background-color: var(--secondary); padding: 15px 0; position: sticky; top: 0; z-index: 100; box-shadow: var(--shadow); }
+    .header-content { display:flex; justify-content:space-between; align-items:center; }
+    .logo { display:flex; align-items:center; gap:10px; }
+    .logo i { color: var(--primary); font-size:28px; }
+    .logo h1 { font-size:24px; font-weight:700; background: linear-gradient(to right, var(--primary), var(--accent)); -webkit-background-clip:text; background-clip:text; color:transparent; }
+    .nav-links { display:flex; list-style:none; gap:25px; }
+    .nav-links a { color:var(--light); text-decoration:none; font-weight:500; transition:var(--transition); display:flex; align-items:center; gap:5px; }
+    .nav-links a:hover { color:var(--primary); }
+    .nav-links a.active { color:var(--primary); }
+    .user-actions { display:flex; align-items:center; gap:15px; }
+
+    .btn { padding:8px 16px; border-radius:4px; font-weight:600; cursor:pointer; transition:var(--transition); border:none; display:flex; align-items:center; gap:8px; }
+    .btn-primary { background-color:var(--primary); color:white; }
+    .btn-primary:hover { background-color:var(--primary-dark); }
+    .btn-outline { background-color:transparent; border:1px solid var(--primary); color:var(--primary); }
+    .btn-outline:hover { background-color:var(--primary); color:white; }
+
+    .search-bar { display:flex; align-items:center; background: rgba(255,255,255,0.1); border-radius:4px; padding:8px 15px; width:300px; }
+    .search-bar input { background:transparent; border:none; color:var(--light); width:100%; padding:5px; outline:none; }
+    .search-bar i { color:var(--gray); }
+
+    .modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:1000; align-items:center; justify-content:center; overflow-y:auto; padding:20px; }
+    .url-modal-content { background:var(--secondary); padding:30px; border-radius:8px; width:90%; max-width:600px; max-height:85vh; overflow-y:auto; box-shadow:var(--shadow); }
+    .modal-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; padding-bottom:15px; border-bottom:1px solid rgba(255,255,255,0.1); }
+    .modal-header h3 { display:flex; align-items:center; gap:10px; font-size:22px; }
+    .close-modal { background:none; border:none; color:var(--light); font-size:28px; cursor:pointer; transition:var(--transition); }
+    .close-modal:hover { color:var(--accent); }
+
+    .url-input-group { margin-bottom:20px; }
+    .url-input-group label { display:block; margin-bottom:8px; font-weight:500; font-size:16px; }
+    .url-input-group input { width:100%; padding:12px 15px; border-radius:4px; border:1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.1); color:var(--light); font-size:16px; transition:var(--transition); }
+    .url-input-group input:focus { outline:none; border-color:var(--primary); box-shadow:0 0 0 2px rgba(52,152,219,0.2); }
+
+    .proxy-options { margin-bottom:20px; }
+    .proxy-options h4 { margin-bottom:15px; font-size:18px; color:var(--primary); display:flex; align-items:center; gap:8px; }
+    .proxy-options label { display:flex; align-items:center; gap:10px; margin-bottom:10px; cursor:pointer; padding:10px 12px; border-radius:4px; transition:var(--transition); border:1px solid transparent; }
+    .proxy-options label:hover { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1); }
+    .proxy-options input[type="radio"] { margin:0; transform:scale(1.2); }
+
+    .custom-proxy-section { margin-top:20px; padding:15px; background: rgba(255,255,255,0.05); border-radius:8px; border:1px solid rgba(255,255,255,0.1); }
+    .custom-proxy-section h4 { margin-bottom:10px; color:var(--primary); display:flex; align-items:center; gap:8px; }
+    .custom-proxy-input { display:flex; gap:10px; margin-bottom:10px; }
+    .custom-proxy-input input { flex:1; padding:10px 12px; border-radius:4px; border:1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.1); color:var(--light); transition:var(--transition); }
+    .custom-proxy-input input:focus { outline:none; border-color:var(--primary); }
+    .custom-proxy-input button { padding:10px 15px; background:var(--primary); color:white; border:none; border-radius:4px; cursor:pointer; transition:var(--transition); font-weight:600; }
+    .custom-proxy-input button:hover { background:var(--primary-dark); }
+
+    .url-help { background: rgba(255,255,255,0.05); padding:15px; border-radius:4px; margin-bottom:20px; font-size:14px; border:1px solid rgba(255,255,255,0.1); }
+    .url-help h4 { margin-bottom:8px; color:var(--primary); }
+    .url-help ul { list-style:none; padding-left:0; }
+    .url-help li { margin-bottom:5px; display:flex; align-items:center; gap:8px; }
+    .url-help li i { color:var(--success); font-size:12px; }
+
+    .url-actions { display:flex; gap:15px; justify-content:center; margin-top:20px; flex-wrap:wrap; }
+    .url-actions .btn { padding:10px 20px; font-size:16px; min-width:160px; justify-content:center; }
+
+    .status-message { padding:12px 15px; border-radius:4px; margin:15px 0; display:flex; align-items:center; gap:10px; font-size:14px; }
+    .status-success { background: rgba(46,204,113,0.2); border-left:4px solid var(--success); color:#d1f7e5; }
+    .status-error { background: rgba(231,76,60,0.2); border-left:4px solid var(--danger); color:#fadbd8; }
+    .status-warning { background: rgba(243,156,18,0.2); border-left:4px solid var(--warning); color:#fdebd0; }
+
+    .main-content { display:grid; grid-template-columns:400px 1fr; gap:20px; padding:20px 0; min-height:calc(100vh - 140px); }
+    .channels-sidebar { background-color: rgba(0,0,0,0.3); border-radius:8px; padding:20px; overflow-y:auto; height:calc(100vh - 160px); display:flex; flex-direction:column; }
+    .sidebar-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; padding-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.1); flex-shrink:0; }
+    .sidebar-header h3 { font-size:18px; display:flex; align-items:center; gap:8px; }
+    .category-tabs { display:flex; gap:10px; margin-bottom:15px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:10px; flex-shrink:0; flex-wrap:wrap; }
+    .category-tab { padding:8px 15px; border-radius:20px; font-size:13px; cursor:pointer; transition:var(--transition); background: rgba(255,255,255,0.05); }
+    .category-tab.active { background: var(--primary); }
+
+    .groups-list { display:flex; flex-direction:column; gap:10px; overflow-y:auto; flex:1; }
+    .group-item { background: rgba(255,255,255,0.05); border-radius:6px; padding:12px; cursor:pointer; transition:var(--transition); }
+    .group-item:hover { background: rgba(255,255,255,0.1); }
+    .group-item.active { background: var(--primary); }
+    .group-header { display:flex; justify-content:space-between; align-items:center; }
+    .group-name { font-weight:600; font-size:14px; }
+    .group-count { background: rgba(255,255,255,0.2); padding:2px 8px; border-radius:12px; font-size:12px; }
+    .channels-list { margin-top:10px; display:none; max-height:280px; overflow-y:auto; }
+    .group-item.active .channels-list { display:block; }
+
+    .channel-item { display:flex; align-items:center; gap:10px; padding:8px; border-radius:4px; margin-bottom:5px; cursor:pointer; transition:var(--transition); }
+    .channel-item:hover { background: rgba(255,255,255,0.1); }
+    .channel-item.active { background: var(--primary); }
+    .channel-logo { width:30px; height:30px; border-radius:4px; object-fit:cover; }
+    .channel-info { flex:1; min-width:0; }
+    .channel-name { font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .channel-resolution { font-size:11px; color:var(--gray); }
+    .favorite-btn { background:none; border:none; color:var(--gray); cursor:pointer; font-size:14px; transition:var(--transition); padding:4px; }
+    .favorite-btn.active { color:var(--accent); }
+
+    .player-section { background-color: rgba(0,0,0,0.3); border-radius:8px; padding:20px; display:flex; flex-direction:column; height:calc(100vh - 160px); }
+    .player-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; }
+    .player-header h3 { font-size:20px; display:flex; align-items:center; gap:10px; }
+    .now-playing { font-size:14px; color:var(--gray); }
+    .video-container { position:relative; width:100%; flex:1; background-color:#000; border-radius:8px; overflow:hidden; margin-bottom:20px; }
+    #videoPlayer { width:100%; height:100%; background-color:#000; }
+    .player-controls { display:flex; justify-content:space-between; align-items:center; flex-shrink:0; }
+    .control-group { display:flex; gap:10px; }
+    .control-btn { background: rgba(255,255,255,0.1); border:none; color:white; width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:var(--transition); }
+    .control-btn:hover { background: rgba(255,255,255,0.2); }
+    .quality-selector { background: rgba(255,255,255,0.1); border:none; color:white; padding:8px 15px; border-radius:4px; }
+
+    .playlists-section { background-color: rgba(0,0,0,0.3); border-radius:8px; padding:20px; margin-top:20px; }
+    .section-title { text-align:center; margin-bottom:30px; }
+    .section-title h2 { font-size:28px; margin-bottom:10px; color:var(--light); display:flex; align-items:center; justify-content:center; gap:10px; }
+    .section-title p { color:var(--gray); max-width:600px; margin:0 auto; }
+
+    .playlists-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap:20px; margin-bottom:30px; }
+    .playlist-card { background: rgba(255,255,255,0.05); border-radius:8px; padding:20px; transition:var(--transition); cursor:pointer; }
+    .playlist-card:hover { transform: translateY(-5px); box-shadow:var(--shadow); }
+    .playlist-card.active { border:2px solid var(--primary); }
+    .playlist-icon { font-size:40px; color:var(--primary); margin-bottom:15px; text-align:center; }
+    .playlist-info h4 { margin-bottom:10px; font-size:18px; }
+    .playlist-info p { color:var(--gray); font-size:14px; margin-bottom:5px; }
+    .playlist-actions { display:flex; gap:10px; margin-top:15px; }
+    .playlist-actions .btn { flex:1; justify-content:center; padding:6px 12px; font-size:12px; }
+
+    .upload-section { background-color: rgba(0,0,0,0.3); border-radius:8px; padding:30px; margin-top:20px; }
+    .upload-area { border:2px dashed var(--primary); border-radius:8px; padding:40px; text-align:center; margin-bottom:20px; transition:var(--transition); cursor:pointer; }
+    .upload-area:hover { background-color: rgba(52,152,219,0.1); }
+    .upload-area i { font-size:50px; color:var(--primary); margin-bottom:15px; }
+    .upload-area h3 { margin-bottom:10px; }
+    .upload-area p { color:var(--gray); margin-bottom:15px; }
+    .formats-list { display:flex; justify-content:center; gap:15px; margin-top:20px; flex-wrap:wrap; }
+    .format-tag { background: rgba(255,255,255,0.1); padding:5px 15px; border-radius:20px; font-size:14px; }
+
+    .playlist-actions-main { display:flex; gap:15px; justify-content:center; }
+
+    .spinner { border:4px solid rgba(255,255,255,0.3); border-radius:50%; border-top:4px solid var(--primary); width:40px; height:40px; animation:spin 1s linear infinite; margin:20px auto; }
+    @keyframes spin { 0%{ transform:rotate(0deg); } 100%{ transform:rotate(360deg); } }
+    .hidden { display:none; }
+
+    .empty-state { text-align:center; padding:40px; color:var(--gray); }
+    .empty-state i { font-size:60px; margin-bottom:20px; color:var(--primary); }
+
+    @media (max-width:1024px) { .main-content { grid-template-columns:1fr; } .channels-sidebar { height:auto; max-height:400px; } .player-section { height:auto; } }
+    @media (max-width:768px) {
+      .nav-links { display:none; }
+      .search-bar { width:200px; }
+      .playlist-actions-main { flex-direction:column; align-items:center; }
+      .playlists-grid { grid-template-columns:1fr; }
+      .proxy-options label { font-size:14px; }
+      .category-tabs { flex-direction:column; }
+      .custom-proxy-input { flex-direction:column; }
+      .url-actions { flex-direction:column; }
+      .url-actions .btn { width:100%; }
+    }
+  </style>
 </head>
 <body>
-    <!-- Header -->
-    <header>
-        <div class="container">
-            <div class="header-content">
-                <div class="logo">
-                    <i class="fas fa-tv"></i>
-                    <h1>StreamTV</h1>
-                </div>
-                <ul class="nav-links">
-                    <li><a href="#" class="active"><i class="fas fa-home"></i> Home</a></li>
-                    <li><a href="#player"><i class="fas fa-play-circle"></i> Player</a></li>
-                    <li><a href="#playlists"><i class="fas fa-list"></i> Playlists</a></li>
-                    <li><a href="#upload"><i class="fas fa-upload"></i> Upload</a></li>
-                </ul>
-                <div class="user-actions">
-                    <div class="search-bar">
-                        <i class="fas fa-search"></i>
-                        <input type="text" id="searchInput" placeholder="Search channels...">
-                    </div>
-                    <button class="btn btn-outline" id="loginBtn"><i class="fas fa-user"></i> Login</button>
-                    <button class="btn btn-outline" id="uploadBtn"><i class="fas fa-plus"></i> Add Playlist</button>
-                </div>
-            </div>
-        </div>
-    </header>
-
-    <!-- Login Modal -->
-    <div class="modal" id="loginModal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3><i class="fas fa-user"></i> Login to StreamTV</h3>
-                <button class="close-modal" id="closeLoginModal">&times;</button>
-            </div>
-            
-            <form class="login-form">
-                <div class="form-group">
-                    <label for="username">Username</label>
-                    <input type="text" id="username" placeholder="Enter your username" required>
-                </div>
-                
-                <div class="form-group">
-                    <label for="password">Password</label>
-                    <input type="password" id="password" placeholder="Enter your password" required>
-                </div>
-                
-                <div class="login-options">
-                    <div class="remember-me">
-                        <input type="checkbox" id="rememberMe">
-                        <label for="rememberMe">Remember me</label>
-                    </div>
-                    <a href="#" class="forgot-password">Forgot password?</a>
-                </div>
-                
-                <button type="submit" class="btn btn-primary">
-                    <i class="fas fa-sign-in-alt"></i> Login
-                </button>
-            </form>
-            
-            <div style="text-align: center; margin-top: 20px; color: var(--gray);">
-                <p>Don't have an account? <a href="#" style="color: var(--primary);">Sign up</a></p>
-            </div>
-        </div>
-    </div>
-
-    <!-- Main Content -->
+  <!-- Header -->
+  <header role="banner">
     <div class="container">
-        <div class="main-content">
-            <!-- Channels Sidebar - Made wider -->
-            <div class="channels-sidebar">
-                <div class="sidebar-header">
-                    <h3><i class="fas fa-list"></i> Channels</h3>
-                    <span id="channelsCount">0 channels</span>
-                </div>
-                
-                <div class="category-tabs">
-                    <div class="category-tab active" data-category="all">All</div>
-                    <div class="category-tab" data-category="favorites">Favorites</div>
-                    <div class="category-tab" data-category="tv">TV</div>
-                    <div class="category-tab" data-category="movies">Movies</div>
-                    <div class="category-tab" data-category="series">Series</div>
-                </div>
-                
-                <div class="groups-list" id="groupsList">
-                    <div class="empty-state" id="emptyChannels">
-                        <i class="fas fa-broadcast-tower"></i>
-                        <h3>No channels loaded</h3>
-                        <p>Upload an M3U playlist to see your channels here</p>
-                    </div>
-                </div>
-            </div>
+      <div class="header-content" role="navigation" aria-label="Main navigation">
+        <div class="logo" aria-hidden="true">
+          <i class="fas fa-tv"></i>
+          <h1>StreamTV</h1>
+        </div>
+        <ul class="nav-links" role="menubar">
+          <li role="none"><a href="#" class="active" role="menuitem"><i class="fas fa-home" aria-hidden="true"></i> Home</a></li>
+          <li role="none"><a href="#player" role="menuitem"><i class="fas fa-play-circle" aria-hidden="true"></i> Player</a></li>
+          <li role="none"><a href="#playlists" role="menuitem"><i class="fas fa-list" aria-hidden="true"></i> Playlists</a></li>
+          <li role="none"><a href="#upload" role="menuitem"><i class="fas fa-upload" aria-hidden="true"></i> Upload</a></li>
+        </ul>
+        <div class="user-actions" role="region" aria-label="User actions">
+          <div class="search-bar" role="search" aria-label="Buscar canales">
+            <i class="fas fa-search" aria-hidden="true"></i>
+            <input type="text" id="searchInput" placeholder="Search channels..." aria-label="Search channels">
+          </div>
+          <button class="btn btn-outline" id="uploadBtn" aria-haspopup="dialog"><i class="fas fa-plus" aria-hidden="true"></i> Add Playlist</button>
+          <button class="btn btn-outline" id="addUrlBtn" aria-haspopup="dialog"><i class="fas fa-link" aria-hidden="true"></i> Add URL</button>
+        </div>
+      </div>
+    </div>
+  </header>
 
-            <!-- Player Section -->
-            <div class="player-section" id="player">
-                <div class="player-header">
-                    <h3><i class="fas fa-play-circle"></i> Player</h3>
-                    <div class="now-playing" id="nowPlaying">Select a channel to start</div>
-                </div>
-                
-                <div class="video-container">
-                    <video id="videoPlayer" controls>
-                        Your browser does not support the video element.
-                    </video>
-                </div>
-                
-                <div class="player-controls">
-                    <div class="control-group">
-                        <button class="control-btn" id="playBtn"><i class="fas fa-play"></i></button>
-                        <button class="control-btn" id="pauseBtn"><i class="fas fa-pause"></i></button>
-                        <button class="control-btn" id="fullscreenBtn"><i class="fas fa-expand"></i></button>
-                    </div>
-                    <div class="control-group">
-                        <button class="control-btn" id="subtitlesBtn"><i class="fas fa-closed-captioning"></i></button>
-                        <button class="control-btn" id="settingsBtn"><i class="fas fa-cog"></i></button>
-                        <select class="quality-selector" id="qualitySelector">
-                            <option value="auto">Auto</option>
-                            <option value="1080">1080p</option>
-                            <option value="720">720p</option>
-                            <option value="480">480p</option>
-                        </select>
-                    </div>
-                </div>
-            </div>
+  <!-- Main Content -->
+  <div class="container" role="main">
+    <div class="main-content">
+      <!-- Channels Sidebar -->
+      <aside class="channels-sidebar" aria-label="Channels sidebar">
+        <div class="sidebar-header">
+          <h3><i class="fas fa-list" aria-hidden="true"></i> Channels</h3>
+          <span id="channelsCount" aria-live="polite">0 channels</span>
         </div>
 
-        <!-- Playlists Section -->
-        <section class="playlists-section" id="playlists">
-            <div class="section-title">
-                <h2><i class="fas fa-list"></i> Your Playlists</h2>
-                <p>Manage and organize your IPTV playlists</p>
-            </div>
-            
-            <div class="playlists-grid" id="playlistsGrid">
-                <div class="empty-state" id="emptyPlaylists">
-                    <i class="fas fa-list"></i>
-                    <h3>No playlists available</h3>
-                    <p>Upload your first M3U playlist to get started</p>
-                </div>
-            </div>
-            
-            <div class="playlist-actions-main">
-                <button class="btn btn-primary" id="createPlaylistBtn"><i class="fas fa-plus"></i> Create New Playlist</button>
-                <button class="btn btn-outline" id="addUrlBtn"><i class="fas fa-link"></i> Add from URL</button>
-            </div>
-        </section>
-
-        <!-- Upload Section -->
-        <section class="upload-section" id="upload">
-            <div class="section-title">
-                <h2><i class="fas fa-upload"></i> Upload Playlist</h2>
-                <p>Import your M3U playlist to start watching your channels organized by categories</p>
-            </div>
-            <div class="upload-area" id="uploadArea">
-                <i class="fas fa-cloud-upload-alt"></i>
-                <h3>Drag your M3U file here</h3>
-                <p>or click to select a file (no size limit)</p>
-                <input type="file" id="fileInput" accept=".m3u,.m3u8,.xspf,.json" style="display: none;">
-                <div class="formats-list">
-                    <div class="format-tag">M3U</div>
-                    <div class="format-tag">M3U8</div>
-                    <div class="format-tag">XSPF</div>
-                    <div class="format-tag">JSON</div>
-                </div>
-            </div>
-            <div class="playlist-actions-main">
-                <button class="btn btn-primary" id="addPlaylistBtn"><i class="fas fa-plus"></i> New Playlist</button>
-                <button class="btn btn-outline" id="addUrlModalBtn"><i class="fas fa-link"></i> Add from URL</button>
-            </div>
-        </section>
-    </div>
-
-    <!-- URL Input Modal -->
-    <div class="modal" id="urlModal">
-        <div class="url-modal-content">
-            <div class="modal-header">
-                <h3><i class="fas fa-link"></i> Add Playlist from URL</h3>
-                <button class="close-modal" id="closeUrlModal">&times;</button>
-            </div>
-            
-            <div class="url-input-group">
-                <label for="playlistUrl">Playlist URL:</label>
-                <input type="url" id="playlistUrl" placeholder="https://example.com/playlist.m3u" required>
-            </div>
-            
-            <div class="proxy-options">
-                <h4>Select CORS Proxy:</h4>
-                <label>
-                    <input type="radio" name="proxyOption" value="direct" checked>
-                    Try Direct Connection (may fail due to CORS)
-                </label>
-                <label>
-                    <input type="radio" name="proxyOption" value="corsproxy">
-                    CORS Proxy (corsproxy.io)
-                </label>
-                <label>
-                    <input type="radio" name="proxyOption" value="allorigins">
-                    AllOrigins Proxy (api.allorigins.win)
-                </label>
-                <label>
-                    <input type="radio" name="proxyOption" value="corsanywhere">
-                    CORS Anywhere (cors-anywhere.herokuapp.com)
-                </label>
-                <label>
-                    <input type="radio" name="proxyOption" value="thingproxy">
-                    ThingProxy (thingproxy.freeboard.io)
-                </label>
-                <label>
-                    <input type="radio" name="proxyOption" value="corscontainer">
-                    CORS Container (api.codetabs.com)
-                </label>
-                <label>
-                    <input type="radio" name="proxyOption" value="crossorigin">
-                    CrossOrigin (crossorigin.me)
-                </label>
-                <label>
-                    <input type="radio" name="proxyOption" value="corsbridge">
-                    CORS Bridge (corsbridge.com)
-                </label>
-            </div>
-            
-            <div class="url-help">
-                <h4>Tips for URL Playlists:</h4>
-                <ul>
-                    <li><i class="fas fa-check"></i> Use direct M3U URLs ending with .m3u or .m3u8</li>
-                    <li><i class="fas fa-check"></i> CORS Proxy bypasses browser security restrictions</li>
-                    <li><i class="fas fa-check"></i> Try different proxy options if one fails</li>
-                    <li><i class="fas fa-check"></i> Make sure the URL is accessible from your network</li>
-                </ul>
-            </div>
-            
-            <div class="playlist-actions-main">
-                <button class="btn btn-primary" id="loadUrlBtn"><i class="fas fa-download"></i> Load Playlist</button>
-                <button class="btn btn-outline" id="testUrlBtn"><i class="fas fa-test"></i> Test URL</button>
-            </div>
+        <div class="category-tabs" role="tablist" aria-label="Categories">
+          <div class="category-tab active" data-category="all" role="tab" tabindex="0">All</div>
+          <div class="category-tab" data-category="favorites" role="tab" tabindex="0">Favorites</div>
+          <div class="category-tab" data-category="tv" role="tab" tabindex="0">TV</div>
+          <div class="category-tab" data-category="movies" role="tab" tabindex="0">Movies</div>
+          <div class="category-tab" data-category="series" role="tab" tabindex="0">Series</div>
         </div>
+
+        <div class="groups-list" id="groupsList" aria-live="polite"></div>
+      </aside>
+
+      <!-- Player Section -->
+      <section class="player-section" id="player" aria-label="Player section">
+        <div class="player-header">
+          <h3><i class="fas fa-play-circle" aria-hidden="true"></i> Player</h3>
+          <div class="now-playing" id="nowPlaying">Select a channel to start</div>
+        </div>
+
+        <div class="video-container" role="region" aria-label="Video player">
+          <video id="videoPlayer" controls aria-label="Video player">Your browser does not support the video element.</video>
+        </div>
+
+        <div class="player-controls" role="toolbar" aria-label="Player controls">
+          <div class="control-group">
+            <button class="control-btn" id="playBtn" aria-label="Play"><i class="fas fa-play" aria-hidden="true"></i></button>
+            <button class="control-btn" id="pauseBtn" aria-label="Pause"><i class="fas fa-pause" aria-hidden="true"></i></button>
+            <button class="control-btn" id="fullscreenBtn" aria-label="Fullscreen"><i class="fas fa-expand" aria-hidden="true"></i></button>
+          </div>
+          <div class="control-group">
+            <button class="control-btn" id="subtitlesBtn" aria-label="Subtitles"><i class="fas fa-closed-captioning" aria-hidden="true"></i></button>
+            <button class="control-btn" id="settingsBtn" aria-label="Settings"><i class="fas fa-cog" aria-hidden="true"></i></button>
+            <select class="quality-selector" id="qualitySelector" aria-label="Quality selector">
+              <option value="auto">Auto</option>
+              <!-- quality options se poblarán dinámicamente -->
+            </select>
+          </div>
+        </div>
+      </section>
     </div>
 
-    <script>
-        // Variables globales
-        let currentPlaylist = [];
-        let favorites = JSON.parse(localStorage.getItem('favorites')) || [];
-        let playlists = JSON.parse(localStorage.getItem('playlists')) || [];
-        let currentPlaylistId = null;
-        let hls = null;
-        let currentCategory = 'all';
+    <!-- Playlists Section -->
+    <section class="playlists-section" id="playlists" aria-label="Playlists">
+      <div class="section-title">
+        <h2><i class="fas fa-list" aria-hidden="true"></i> Your Playlists</h2>
+        <p>Manage and organize your IPTV playlists</p>
+      </div>
 
-        // Elementos DOM
-        const videoPlayer = document.getElementById('videoPlayer');
-        const playBtn = document.getElementById('playBtn');
-        const pauseBtn = document.getElementById('pauseBtn');
-        const fullscreenBtn = document.getElementById('fullscreenBtn');
-        const qualitySelector = document.getElementById('qualitySelector');
-        const nowPlaying = document.getElementById('nowPlaying');
-        const groupsList = document.getElementById('groupsList');
-        const emptyChannels = document.getElementById('emptyChannels');
-        const channelsCount = document.getElementById('channelsCount');
-        const uploadArea = document.getElementById('uploadArea');
-        const fileInput = document.getElementById('fileInput');
-        const uploadBtn = document.getElementById('uploadBtn');
-        const addUrlModalBtn = document.getElementById('addUrlModalBtn');
-        const addPlaylistBtn = document.getElementById('addPlaylistBtn');
-        const createPlaylistBtn = document.getElementById('createPlaylistBtn');
-        const playlistsGrid = document.getElementById('playlistsGrid');
-        const emptyPlaylists = document.getElementById('emptyPlaylists');
-        const categoryTabs = document.querySelectorAll('.category-tab');
-        const urlModal = document.getElementById('urlModal');
-        const closeUrlModal = document.getElementById('closeUrlModal');
-        const loadUrlBtn = document.getElementById('loadUrlBtn');
-        const testUrlBtn = document.getElementById('testUrlBtn');
-        const playlistUrl = document.getElementById('playlistUrl');
-        const loginBtn = document.getElementById('loginBtn');
-        const loginModal = document.getElementById('loginModal');
-        const closeLoginModal = document.getElementById('closeLoginModal');
+      <div class="playlists-grid" id="playlistsGrid" aria-live="polite">
+        <div class="empty-state" id="emptyPlaylists">
+          <i class="fas fa-list" aria-hidden="true"></i>
+          <h3>No playlists available</h3>
+          <p>Upload your first M3U playlist to get started</p>
+        </div>
+      </div>
+    </section>
 
-        // Enhanced CORS Proxy URLs
-        const CORS_PROXIES = {
-            direct: '',
-            corsproxy: 'https://corsproxy.io/?',
-            allorigins: 'https://api.allorigins.win/raw?url=',
-            corsanywhere: 'https://cors-anywhere.herokuapp.com/',
-            thingproxy: 'https://thingproxy.freeboard.io/fetch/',
-            corscontainer: 'https://api.codetabs.com/v1/proxy?quest=',
-            crossorigin: 'https://crossorigin.me/',
-            corsbridge: 'https://corsbridge.org/'
+    <!-- Upload Section -->
+    <section class="upload-section" id="upload" aria-label="Upload playlist">
+      <div class="section-title">
+        <h2><i class="fas fa-upload" aria-hidden="true"></i> Upload Playlist</h2>
+        <p>Import your M3U playlist to start watching your channels organized by categories</p>
+      </div>
+
+      <div class="upload-area" id="uploadArea" role="button" tabindex="0" aria-label="Drag and drop M3U file or click to select">
+        <i class="fas fa-cloud-upload-alt" aria-hidden="true"></i>
+        <h3>Drag your M3U file here</h3>
+        <p>or click to select a file (no size limit)</p>
+        <input type="file" id="fileInput" accept=".m3u,.m3u8,.xspf,.json" style="display:none">
+        <div class="formats-list">
+          <div class="format-tag">M3U</div>
+          <div class="format-tag">M3U8</div>
+          <div class="format-tag">XSPF</div>
+          <div class="format-tag">JSON</div>
+        </div>
+      </div>
+
+      <div class="playlist-actions-main">
+        <button class="btn btn-primary" id="addPlaylistBtn"><i class="fas fa-plus" aria-hidden="true"></i> New Playlist</button>
+        <button class="btn btn-outline" id="addUrlModalBtn"><i class="fas fa-link" aria-hidden="true"></i> Add from URL</button>
+      </div>
+    </section>
+  </div>
+
+  <!-- URL Input Modal -->
+  <div class="modal" id="urlModal" role="dialog" aria-modal="true" aria-labelledby="urlModalTitle" aria-hidden="true">
+    <div class="url-modal-content">
+      <div class="modal-header">
+        <h3 id="urlModalTitle"><i class="fas fa-link" aria-hidden="true"></i> Add Playlist from URL</h3>
+        <button class="close-modal" id="closeUrlModal" aria-label="Close">&times;</button>
+      </div>
+
+      <div class="url-input-group">
+        <label for="playlistUrl">Playlist URL:</label>
+        <input type="url" id="playlistUrl" placeholder="https://example.com/playlist.m3u" required aria-required="true">
+      </div>
+
+      <div class="proxy-options" role="radiogroup" aria-label="Proxy options">
+        <h4><i class="fas fa-server" aria-hidden="true"></i> Select CORS Proxy:</h4>
+        <label><input type="radio" name="proxyOption" value="direct" checked> Try Direct Connection (may fail due to CORS)</label>
+        <label><input type="radio" name="proxyOption" value="corsproxy"> CORS Proxy (corsproxy.io)</label>
+        <label><input type="radio" name="proxyOption" value="allorigins"> AllOrigins Proxy (api.allorigins.win)</label>
+        <label><input type="radio" name="proxyOption" value="corsanywhere"> CORS Anywhere (cors-anywhere.herokuapp.com)</label>
+        <label><input type="radio" name="proxyOption" value="thingproxy"> ThingProxy (thingproxy.freeboard.io)</label>
+        <label><input type="radio" name="proxyOption" value="corscontainer"> CORS Container (api.codetabs.com)</label>
+        <label><input type="radio" name="proxyOption" value="crossorigin"> CrossOrigin (crossorigin.me)</label>
+        <label><input type="radio" name="proxyOption" value="corsbridge"> CORS Bridge (corsbridge.com)</label>
+        <label><input type="radio" name="proxyOption" value="custom"> Custom Proxy (configure below)</label>
+      </div>
+
+      <div class="custom-proxy-section" id="customProxySection" style="display:none;">
+        <h4><i class="fas fa-cog" aria-hidden="true"></i> Custom Proxy Configuration</h4>
+        <p>Enter the URL of your custom proxy (e.g., proxy.php)</p>
+        <div class="custom-proxy-input">
+          <input type="text" id="customProxyUrl" placeholder="https://yourdomain.com/proxy.php?url=">
+          <button id="saveCustomProxy">Save</button>
+        </div>
+        <div class="url-help">
+          <p><strong>Tip:</strong> Your proxy should accept a URL parameter and return the M3U content. Example: <code>proxy.php?url=ENCODED_URL</code></p>
+        </div>
+      </div>
+
+      <div class="url-help">
+        <h4><i class="fas fa-lightbulb" aria-hidden="true"></i> Tips for URL Playlists:</h4>
+        <ul>
+          <li><i class="fas fa-check" aria-hidden="true"></i> Use direct M3U URLs ending with .m3u or .m3u8</li>
+          <li><i class="fas fa-check" aria-hidden="true"></i> CORS Proxy bypasses browser security restrictions</li>
+          <li><i class="fas fa-check" aria-hidden="true"></i> Try different proxy options if one fails</li>
+          <li><i class="fas fa-check" aria-hidden="true"></i> Make sure the URL is accessible from your network</li>
+        </ul>
+      </div>
+
+      <div id="urlStatus" aria-live="polite"></div>
+
+      <div class="url-actions">
+        <button class="btn btn-primary" id="loadUrlBtn"><i class="fas fa-download" aria-hidden="true"></i> Load Playlist</button>
+        <button class="btn btn-outline" id="testUrlBtn"><i class="fas fa-vial" aria-hidden="true"></i> Test URL</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mensaje informativo abajo (no visible por defecto) -->
+  <div id="globalStatus" style="position:fixed; bottom:16px; left:16px; z-index:1100;"></div>
+
+  <script>
+/* =====================================================================
+   STREAMTV: Enhanced Single-File HTML
+   - Replaces localStorage with IndexedDB (robust for big playlists)
+   - Improved hls.js integration with real quality switching
+   - Paginated group rendering ("Load more") to avoid huge DOM
+   - Accessibility improvements (aria, keyboard)
+   - Comments include example proxy implementations (PHP & Node)
+   ===================================================================== */
+
+(function(){
+  'use strict';
+
+  /* ---------------------------
+     IndexedDB helper (simple promisified wrapper)
+     Stores:
+       - playlists (object store)
+       - favs (single record)
+       - settings (customProxy)
+     Key design:
+       - playlists store: keyPath = id (timestamp)
+  ----------------------------*/
+  const IDB_DB = 'streamtv-db-v1';
+  const IDB_VERSION = 1;
+  const IDB_STORES = ['playlists','settings','favorites'];
+
+  function openDb() {
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open(IDB_DB, IDB_VERSION);
+      req.onupgradeneeded = function(e) {
+        const db = e.target.result;
+        if (!db.objectStoreNames.contains('playlists')) {
+          db.createObjectStore('playlists', { keyPath: 'id' });
+        }
+        if (!db.objectStoreNames.contains('favorites')) {
+          db.createObjectStore('favorites', { keyPath: 'key' });
+        }
+        if (!db.objectStoreNames.contains('settings')) {
+          db.createObjectStore('settings', { keyPath: 'key' });
+        }
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  async function idbPut(storeName, value) {
+    const db = await openDb();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(storeName, 'readwrite');
+      const store = tx.objectStore(storeName);
+      const req = store.put(value);
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+  async function idbGet(storeName, key) {
+    const db = await openDb();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(storeName, 'readonly');
+      const store = tx.objectStore(storeName);
+      const req = store.get(key);
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+  async function idbGetAll(storeName) {
+    const db = await openDb();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(storeName, 'readonly');
+      const store = tx.objectStore(storeName);
+      const req = store.getAll();
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+  async function idbDelete(storeName, key) {
+    const db = await openDb();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(storeName, 'readwrite');
+      const store = tx.objectStore(storeName);
+      const req = store.delete(key);
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  /* ---------------------------
+     App State
+  ----------------------------*/
+  let playlists = []; // loaded from IDB
+  let favorites = []; // array of channelIds
+  let currentPlaylistId = null;
+  let currentPlaylist = [];
+  let currentCategory = 'all';
+  let hls = null;
+  let customProxyUrl = null;
+  const CHANNEL_RENDER_BATCH = 60; // cantidad por "paginación" en cada grupo
+
+  /* ---------------------------
+     DOM references
+  ----------------------------*/
+  const videoPlayer = document.getElementById('videoPlayer');
+  const playBtn = document.getElementById('playBtn');
+  const pauseBtn = document.getElementById('pauseBtn');
+  const fullscreenBtn = document.getElementById('fullscreenBtn');
+  const qualitySelector = document.getElementById('qualitySelector');
+  const nowPlaying = document.getElementById('nowPlaying');
+  const groupsList = document.getElementById('groupsList');
+  const channelsCount = document.getElementById('channelsCount');
+  const uploadArea = document.getElementById('uploadArea');
+  const fileInput = document.getElementById('fileInput');
+  const uploadBtn = document.getElementById('uploadBtn');
+  const addUrlModalBtn = document.getElementById('addUrlModalBtn');
+  const addPlaylistBtn = document.getElementById('addPlaylistBtn');
+  const playlistsGrid = document.getElementById('playlistsGrid');
+  const emptyPlaylists = document.getElementById('emptyPlaylists');
+  const categoryTabs = document.querySelectorAll('.category-tab');
+  const urlModal = document.getElementById('urlModal');
+  const closeUrlModal = document.getElementById('closeUrlModal');
+  const loadUrlBtn = document.getElementById('loadUrlBtn');
+  const testUrlBtn = document.getElementById('testUrlBtn');
+  const playlistUrl = document.getElementById('playlistUrl');
+  const customProxySection = document.getElementById('customProxySection');
+  const customProxyUrlInput = document.getElementById('customProxyUrl');
+  const saveCustomProxyBtn = document.getElementById('saveCustomProxy');
+  const urlStatus = document.getElementById('urlStatus');
+  const addUrlBtn = document.getElementById('addUrlBtn');
+  const searchInput = document.getElementById('searchInput');
+  const globalStatus = document.getElementById('globalStatus');
+
+  /* ---------------------------
+     Default CORS proxies (UI only)
+     Nota: es recomendable montar tu propio proxy (ver comentarios abajo)
+  ----------------------------*/
+  const CORS_PROXIES = {
+    direct: '',
+    corsproxy: 'https://corsproxy.io/?',
+    allorigins: 'https://api.allorigins.win/raw?url=',
+    corsanywhere: 'https://cors-anywhere.herokuapp.com/',
+    thingproxy: 'https://thingproxy.freeboard.io/fetch/',
+    corscontainer: 'https://api.codetabs.com/v1/proxy?quest=',
+    crossorigin: 'https://crossorigin.me/',
+    corsbridge: 'https://corsbridge.org/',
+    custom: ''
+  };
+
+  /* ---------------------------
+     Init
+  ----------------------------*/
+  document.addEventListener('DOMContentLoaded', async () => {
+    await loadStateFromIDB();
+    setupEventListeners();
+    renderPlaylistsUI();
+    if (currentPlaylistId) {
+      const p = playlists.find(x => x.id === currentPlaylistId);
+      if (p) {
+        currentPlaylist = p.channels || [];
+        renderGroups(currentPlaylist);
+      }
+    }
+    // init custom proxy input if exists
+    const s = await idbGet('settings', 'customProxyUrl');
+    if (s && s.value) {
+      customProxyUrl = s.value;
+      CORS_PROXIES.custom = customProxyUrl;
+      customProxyUrlInput.value = customProxyUrl;
+    }
+  });
+
+  /* ---------------------------
+     Load/Save state in IDB
+  ----------------------------*/
+  async function loadStateFromIDB() {
+    playlists = await idbGetAll('playlists') || [];
+    // idbGetAll returns array of playlist objects
+    // Order newest first (id is timestamp)
+    playlists.sort((a,b)=>b.id - a.id);
+    const favRecord = await idbGet('favorites', 'favlist');
+    favorites = (favRecord && favRecord.channels) ? favRecord.channels : [];
+    // pick first playlist as current if not set
+    if (playlists.length > 0 && !currentPlaylistId) {
+      currentPlaylistId = playlists[0].id;
+    }
+  }
+
+  async function savePlaylistsToIDB() {
+    // Save each playlist object individually
+    for (const pl of playlists) {
+      await idbPut('playlists', pl);
+    }
+  }
+
+  async function saveFavoritesToIDB() {
+    await idbPut('favorites', { key: 'favlist', channels: favorites });
+  }
+
+  async function saveSetting(key, value) {
+    await idbPut('settings', { key, value });
+  }
+
+  /* ---------------------------
+     Event listeners
+  ----------------------------*/
+  function setupEventListeners() {
+    playBtn.addEventListener('click', playVideo);
+    pauseBtn.addEventListener('click', pauseVideo);
+    fullscreenBtn.addEventListener('click', toggleFullscreen);
+    qualitySelector.addEventListener('change', onQualityChange);
+
+    uploadArea.addEventListener('click', () => fileInput.click());
+    uploadArea.addEventListener('keydown', e => { if (e.key === 'Enter') fileInput.click(); });
+    uploadBtn.addEventListener('click', () => fileInput.click());
+    addPlaylistBtn.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', handleFileUpload);
+
+    addUrlModalBtn.addEventListener('click', openUrlModal);
+    addUrlBtn.addEventListener('click', openUrlModal);
+    closeUrlModal.addEventListener('click', closeUrlModalFn);
+    loadUrlBtn.addEventListener('click', loadUrlPlaylist);
+    testUrlBtn.addEventListener('click', testUrl);
+    saveCustomProxyBtn.addEventListener('click', saveCustomProxy);
+
+    document.querySelectorAll('input[name="proxyOption"]').forEach(radio => {
+      radio.addEventListener('change', function() {
+        if (this.value === 'custom') customProxySection.style.display = 'block';
+        else customProxySection.style.display = 'none';
+      });
+    });
+
+    window.addEventListener('click', (e) => {
+      if (e.target === urlModal) closeUrlModalFn();
+    });
+
+    searchInput.addEventListener('input', filterChannels);
+
+    categoryTabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        categoryTabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        currentCategory = tab.dataset.category;
+        renderGroups(currentPlaylist);
+      });
+      tab.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') tab.click(); });
+    });
+
+    document.addEventListener('keydown', globalKeyHandler);
+    uploadArea.addEventListener('dragover', handleDragOver);
+    uploadArea.addEventListener('drop', handleFileDrop);
+  }
+
+  /* ---------------------------
+     Keyboard global handler
+  ----------------------------*/
+  function globalKeyHandler(e) {
+    if (e.code === 'Space' && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
+      e.preventDefault();
+      if (videoPlayer.paused) playVideo(); else pauseVideo();
+    }
+    if (e.code === 'KeyF' && document.activeElement.tagName !== 'INPUT') {
+      e.preventDefault();
+      toggleFullscreen();
+    }
+    if (e.key === 'Escape') {
+      if (urlModal.style.display === 'flex') closeUrlModalFn();
+    }
+  }
+
+  /* ---------------------------
+     File upload / parsing M3U
+  ----------------------------*/
+  function handleFileUpload(event) {
+    const file = event.target.files && event.target.files[0];
+    if (file) parseM3UFile(file);
+    // reset input so same file can be reselected
+    fileInput.value = '';
+  }
+
+  function handleDragOver(e) { e.preventDefault(); uploadArea.style.backgroundColor = 'rgba(52,152,219,0.2)'; }
+  function handleFileDrop(e) {
+    e.preventDefault();
+    uploadArea.style.backgroundColor = '';
+    const files = e.dataTransfer.files;
+    if (files.length > 0) parseM3UFile(files[0]);
+  }
+
+  function parseM3UFile(file) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const content = e.target.result;
+      const channels = parseM3UContent(content);
+      const newPlaylist = {
+        id: Date.now(),
+        name: file.name.replace('.m3u','').replace('.m3u8',''),
+        date: new Date().toLocaleDateString(),
+        channels: channels
+      };
+      playlists.unshift(newPlaylist);
+      // save each playlist individually to IDB
+      idbPut('playlists', newPlaylist).then(()=> {
+        showStatus(`Playlist "${newPlaylist.name}" loaded with ${channels.length} channels`, 'success');
+        currentPlaylistId = newPlaylist.id;
+        currentPlaylist = channels;
+        renderGroups(currentPlaylist);
+        renderPlaylistsUI();
+      }).catch(err => {
+        console.error('IDB save error:', err);
+        showStatus('Error saving playlist locally', 'error');
+      });
+    };
+    reader.readAsText(file);
+  }
+
+  function parseM3UContent(content) {
+    const lines = content.split(/\r?\n/);
+    const channels = [];
+    let currentChannel = null;
+    for (let i=0;i<lines.length;i++){
+      const line = lines[i].trim();
+      if (!line) continue;
+      if (line.startsWith('#EXTINF:')) {
+        const info = line.substring(8);
+        // parse common attributes
+        const nameSplit = info.split(',');
+        const name = nameSplit.slice(1).join(',').trim() || `Channel ${channels.length+1}`;
+        currentChannel = {
+          id: Date.now() + channels.length, // unique-ish
+          name: name,
+          group: 'General',
+          url: '',
+          logo: 'https://via.placeholder.com/30x30/3498db/ffffff?text=TV',
+          resolution: 'HD',
+          isFavorite: false
         };
+        const groupMatch = line.match(/group-title="([^"]*)"/i);
+        if (groupMatch) currentChannel.group = groupMatch[1];
+        const logoMatch = line.match(/tvg-logo="([^"]*)"/i);
+        if (logoMatch) currentChannel.logo = logoMatch[1];
+      } else if (line.startsWith('http') || line.startsWith('rtmp') || line.includes('://')) {
+        if (currentChannel) {
+          currentChannel.url = line;
+          channels.push(currentChannel);
+          currentChannel = null;
+        } else {
+          // In case file has raw URLs without EXTINF
+          channels.push({
+            id: Date.now() + channels.length,
+            name: `Channel ${channels.length+1}`,
+            group: 'General',
+            url: line,
+            logo: 'https://via.placeholder.com/30x30/3498db/ffffff?text=TV',
+            resolution: 'HD',
+            isFavorite: false
+          });
+        }
+      }
+    }
+    return channels;
+  }
 
-        // Inicialización
-        document.addEventListener('DOMContentLoaded', function() {
-            loadStoredPlaylists();
-            setupEventListeners();
-            renderPlaylists();
+  /* ---------------------------
+     Render Playlists UI
+  ----------------------------*/
+  function renderPlaylistsUI() {
+    playlistsGrid.innerHTML = '';
+    if (playlists.length === 0) {
+      emptyPlaylists.classList.remove('hidden');
+      return;
+    }
+    emptyPlaylists.classList.add('hidden');
+
+    playlists.forEach(playlist => {
+      const card = document.createElement('div');
+      card.className = `playlist-card ${playlist.id === currentPlaylistId ? 'active' : ''}`;
+      card.innerHTML = `
+        <div class="playlist-icon"><i class="fas fa-list" aria-hidden="true"></i></div>
+        <div class="playlist-info">
+          <h4>${escapeHtml(playlist.name)}</h4>
+          <p>${playlist.channels.length} channels</p>
+          <p>Created: ${playlist.date}</p>
+        </div>
+        <div class="playlist-actions">
+          <button class="btn btn-primary load-pl" data-id="${playlist.id}">Load</button>
+          <button class="btn btn-outline edit-pl" data-id="${playlist.id}">Edit</button>
+          <button class="btn btn-outline del-pl" data-id="${playlist.id}">Delete</button>
+        </div>
+      `;
+      playlistsGrid.appendChild(card);
+
+      card.querySelector('.load-pl').addEventListener('click', () => loadPlaylist(playlist.id));
+      card.querySelector('.edit-pl').addEventListener('click', () => editPlaylistName(playlist.id));
+      card.querySelector('.del-pl').addEventListener('click', () => deletePlaylist(playlist.id));
+    });
+  }
+
+  function loadPlaylist(id) {
+    const pl = playlists.find(p => p.id === id);
+    if (!pl) return;
+    currentPlaylistId = pl.id;
+    currentPlaylist = pl.channels || [];
+    renderGroups(currentPlaylist);
+    renderPlaylistsUI();
+  }
+
+  function editPlaylistName(id) {
+    const pl = playlists.find(p=>p.id===id);
+    if (!pl) return;
+    const newName = prompt('Enter new name for the playlist:', pl.name);
+    if (newName) {
+      pl.name = newName;
+      idbPut('playlists', pl).then(()=> {
+        renderPlaylistsUI();
+        showStatus('Playlist renamed', 'success');
+      });
+    }
+  }
+
+  function deletePlaylist(id) {
+    if (!confirm('Are you sure you want to delete this playlist?')) return;
+    // delete from IDB and from array
+    idbDelete('playlists', id).then(()=> {
+      playlists = playlists.filter(p=>p.id!==id);
+      renderPlaylistsUI();
+      if (currentPlaylistId === id) {
+        currentPlaylist = [];
+        currentPlaylistId = playlists.length ? playlists[0].id : null;
+        if (currentPlaylistId) {
+          currentPlaylist = playlists.find(p=>p.id===currentPlaylistId).channels || [];
+        }
+        renderGroups(currentPlaylist);
+      }
+      showStatus('Playlist deleted', 'success');
+    }).catch(err=>{
+      console.error('Delete error', err);
+      showStatus('Error deleting playlist', 'error');
+    });
+  }
+
+  /* ---------------------------
+     Render groups and channels (paginated per group)
+     Strategy: For each group render first N channels and add "Load more" button to append next N.
+  ----------------------------*/
+  function renderGroups(channels) {
+    groupsList.innerHTML = '';
+    if (!channels || channels.length===0) {
+      groupsList.innerHTML = `
+        <div class="empty-state">
+          <i class="fas fa-broadcast-tower" aria-hidden="true"></i>
+          <h3>No channels loaded</h3>
+          <p>Upload an M3U playlist to see your channels here</p>
+        </div>
+      `;
+      channelsCount.textContent = '0 channels';
+      return;
+    }
+
+    // Filter by category
+    let filtered = channels;
+    if (currentCategory === 'favorites') {
+      filtered = channels.filter(ch => favorites.includes(ch.tempId || ch.id));
+    } else if (currentCategory !== 'all') {
+      filtered = channels.filter(ch => (ch.group || '').toLowerCase().includes(currentCategory));
+    }
+
+    if (filtered.length === 0) {
+      groupsList.innerHTML = `
+        <div class="empty-state">
+          <i class="fas fa-filter" aria-hidden="true"></i>
+          <h3>No channels in this category</h3>
+          <p>Try selecting a different category</p>
+        </div>
+      `;
+      channelsCount.textContent = '0 channels';
+      return;
+    }
+
+    // Group by group-name
+    const groups = {};
+    filtered.forEach(ch => {
+      const g = ch.group || 'General';
+      if (!groups[g]) groups[g] = [];
+      groups[g].push(ch);
+    });
+
+    channelsCount.textContent = `${filtered.length} channel${filtered.length!==1?'s':''}`;
+
+    Object.keys(groups).forEach(groupName => {
+      const groupChannels = groups[groupName];
+      const groupItem = document.createElement('div');
+      groupItem.className = 'group-item';
+      groupItem.innerHTML = `
+        <div class="group-header" role="button" tabindex="0" aria-expanded="false">
+          <div class="group-name">${escapeHtml(groupName)}</div>
+          <div class="group-count">${groupChannels.length}</div>
+        </div>
+        <div class="channels-list"></div>
+      `;
+      const channelsListEl = groupItem.querySelector('.channels-list');
+
+      // Keep an internal pointer for pagination
+      let offset = 0;
+      function renderBatch() {
+        const slice = groupChannels.slice(offset, offset + CHANNEL_RENDER_BATCH);
+        slice.forEach(ch => {
+          const chEl = document.createElement('div');
+          chEl.className = 'channel-item';
+          chEl.tabIndex = 0;
+          chEl.innerHTML = `
+            <img src="${escapeHtml(ch.logo||'https://via.placeholder.com/30x30/3498db/ffffff?text=TV')}" alt="${escapeHtml(ch.name)}" class="channel-logo">
+            <div class="channel-info">
+              <div class="channel-name">${escapeHtml(ch.name)}</div>
+              <div class="channel-resolution">${escapeHtml(ch.resolution || 'HD')}</div>
+            </div>
+            <button class="favorite-btn ${favorites.includes(ch.tempId || ch.id) ? 'active' : ''}" data-id="${ch.tempId || ch.id}" aria-label="Toggle favorite">
+              <i class="${favorites.includes(ch.tempId || ch.id) ? 'fas' : 'far'} fa-heart" aria-hidden="true"></i>
+            </button>
+          `;
+          // click to play (unless favorite button clicked)
+          chEl.addEventListener('click', (e) => {
+            if (e.target.closest('.favorite-btn')) return;
+            playChannel(ch);
+            // mark active UI
+            channelsListEl.querySelectorAll('.channel-item.active').forEach(i=>i.classList.remove('active'));
+            chEl.classList.add('active');
+          });
+          chEl.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') chEl.click();
+          });
+
+          // favorite toggle
+          const favBtn = chEl.querySelector('.favorite-btn');
+          favBtn.addEventListener('click', (ev) => {
+            ev.stopPropagation();
+            const cid = favBtn.dataset.id;
+            toggleFavorite(cid);
+            favBtn.classList.toggle('active');
+            favBtn.innerHTML = `<i class="${favorites.includes(cid) ? 'fas' : 'far'} fa-heart" aria-hidden="true"></i>`;
+          });
+
+          channelsListEl.appendChild(chEl);
         });
 
-        // Configurar event listeners
-        function setupEventListeners() {
-            // Controles del reproductor
-            playBtn.addEventListener('click', playVideo);
-            pauseBtn.addEventListener('click', pauseVideo);
-            fullscreenBtn.addEventListener('click', toggleFullscreen);
-            qualitySelector.addEventListener('change', changeQuality);
-            
-            // Login functionality
-            loginBtn.addEventListener('click', () => loginModal.style.display = 'flex');
-            closeLoginModal.addEventListener('click', () => loginModal.style.display = 'none');
-            
-            // Carga de listas
-            uploadArea.addEventListener('click', () => fileInput.click());
-            uploadBtn.addEventListener('click', () => fileInput.click());
-            addPlaylistBtn.addEventListener('click', () => fileInput.click());
-            createPlaylistBtn.addEventListener('click', createNewPlaylist);
-            fileInput.addEventListener('change', handleFileUpload);
-            
-            // Modal de URL
-            addUrlModalBtn.addEventListener('click', () => urlModal.style.display = 'flex');
-            closeUrlModal.addEventListener('click', () => urlModal.style.display = 'none');
-            loadUrlBtn.addEventListener('click', loadUrlPlaylist);
-            testUrlBtn.addEventListener('click', testUrl);
-            
-            // Cerrar modales al hacer clic fuera
-            window.addEventListener('click', (e) => {
-                if (e.target === urlModal) {
-                    urlModal.style.display = 'none';
-                }
-                if (e.target === loginModal) {
-                    loginModal.style.display = 'none';
-                }
-            });
-            
-            // Búsqueda
-            document.getElementById('searchInput').addEventListener('input', filterChannels);
-            
-            // Categorías
-            categoryTabs.forEach(tab => {
-                tab.addEventListener('click', () => {
-                    categoryTabs.forEach(t => t.classList.remove('active'));
-                    tab.classList.add('active');
-                    currentCategory = tab.dataset.category;
-                    renderGroups(currentPlaylist);
-                });
-            });
-            
-            // Teclado
-            document.addEventListener('keydown', handleKeyPress);
-            
-            // Arrastrar y soltar
-            uploadArea.addEventListener('dragover', handleDragOver);
-            uploadArea.addEventListener('dragleave', handleDragLeave);
-            uploadArea.addEventListener('drop', handleFileDrop);
+        offset += slice.length;
+        // add load more if remaining
+        const remaining = groupChannels.length - offset;
+        // remove existing load-more
+        const existingLoadMore = channelsListEl.querySelector('.load-more');
+        if (existingLoadMore) existingLoadMore.remove();
+        if (remaining > 0) {
+          const lm = document.createElement('button');
+          lm.className = 'btn btn-outline load-more';
+          lm.textContent = `Load more (${remaining})`;
+          lm.addEventListener('click', () => renderBatch());
+          channelsListEl.appendChild(lm);
         }
+      }
 
-        // Probar URL
-        async function testUrl() {
-            const url = playlistUrl.value.trim();
-            if (!url) {
-                alert('Please enter a URL');
-                return;
-            }
+      // Expand/collapse group
+      const header = groupItem.querySelector('.group-header');
+      header.addEventListener('click', () => {
+        const isActive = groupItem.classList.toggle('active');
+        header.setAttribute('aria-expanded', isActive ? 'true' : 'false');
+        if (isActive && channelsListEl.children.length === 0) {
+          renderBatch();
+        }
+      });
+      header.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') header.click(); });
 
-            const proxyOption = document.querySelector('input[name="proxyOption"]:checked').value;
-            const testUrl = getProxiedUrl(url, proxyOption);
-            
+      // Append group
+      groupsList.appendChild(groupItem);
+    });
+  }
+
+  /* ---------------------------
+     Favorites handling
+  ----------------------------*/
+  async function toggleFavorite(channelId) {
+    const idx = favorites.indexOf(channelId);
+    if (idx > -1) favorites.splice(idx,1);
+    else favorites.push(channelId);
+    await saveFavoritesToIDB();
+  }
+
+  /* ---------------------------
+     Search/filter
+  ----------------------------*/
+  function filterChannels() {
+    const term = searchInput.value.trim().toLowerCase();
+    if (!term) {
+      renderGroups(currentPlaylist);
+      return;
+    }
+    const filtered = currentPlaylist.filter(ch => (ch.name || '').toLowerCase().includes(term));
+    renderGroups(filtered);
+  }
+
+  /* ---------------------------
+     Player & hls.js integration
+  ----------------------------*/
+  function playChannel(channel) {
+    nowPlaying.textContent = `Now Playing: ${channel.name}`;
+    if (hls) {
+      try { hls.destroy(); } catch(e){}
+      hls = null;
+    }
+    // Clean quality selector
+    populateQualitySelector([]);
+
+    // if HLS (.m3u8)
+    if (channel.url && channel.url.includes('.m3u8')) {
+      if (Hls.isSupported()) {
+        hls = new Hls({
+          // enable worker for performance
+          enableWorker: true,
+          // autoStartLoad true for autoplaying playlists
+          autoStartLoad: true
+        });
+        hls.loadSource(channel.url);
+        hls.attachMedia(videoPlayer);
+
+        hls.on(Hls.Events.MANIFEST_PARSED, function() {
+          // populate quality selector with available levels
+          const levels = hls.levels || [];
+          const qualities = levels.map(l => (l.height ? `${l.height}p` : `${l.bitrate || 'unknown'}bps`));
+          populateQualitySelector(qualities);
+          videoPlayer.play().catch(()=>{ /* ignore autoplay block */ });
+        });
+
+        // update selector if levels updated
+        hls.on(Hls.Events.LEVEL_UPDATED, () => {
+          const levels = hls.levels || [];
+          const qualities = levels.map(l => (l.height ? `${l.height}p` : `${l.bitrate || 'unknown'}bps`));
+          populateQualitySelector(qualities);
+        });
+
+        hls.on(Hls.Events.ERROR, function(event, data) {
+          console.warn('HLS error', data);
+          if (data.fatal) {
+            showStatus('Playback error: ' + data.type, 'error');
+            // attempt recover for network errors
             try {
-                loadUrlBtn.disabled = true;
-                testUrlBtn.disabled = true;
-                testUrlBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Testing...';
-                
-                const response = await fetch(testUrl, { method: 'HEAD' });
-                
-                if (response.ok) {
-                    alert('✅ URL is accessible! You can now load the playlist.');
-                } else {
-                    alert('⚠️ URL returned status: ' + response.status + '. Try a different proxy.');
-                }
-            } catch (error) {
-                alert('❌ Failed to access URL: ' + error.message + '\nTry a different proxy option.');
-            } finally {
-                loadUrlBtn.disabled = false;
-                testUrlBtn.disabled = false;
-                testUrlBtn.innerHTML = '<i class="fas fa-test"></i> Test URL';
-            }
-        }
+              hls.recoverMediaError();
+            } catch(e){}
+          }
+        });
+      } else if (videoPlayer.canPlayType('application/vnd.apple.mpegurl')) {
+        // native HLS (Safari)
+        videoPlayer.src = channel.url;
+        videoPlayer.addEventListener('loadedmetadata', function() {
+          videoPlayer.play();
+        }, { once: true });
+      } else {
+        showStatus('HLS not supported in this browser', 'error');
+      }
+    } else {
+      // normal progressive stream
+      videoPlayer.src = channel.url;
+      videoPlayer.load();
+      videoPlayer.play().catch(()=>{});
+    }
+  }
 
-        // Obtener URL con proxy
-        function getProxiedUrl(url, proxyOption) {
-            if (proxyOption === 'direct') {
-                return url;
-            }
-            return CORS_PROXIES[proxyOption] + encodeURIComponent(url);
-        }
+  function playVideo() { videoPlayer.play().catch(()=>{}); }
+  function pauseVideo() { videoPlayer.pause(); }
+  function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+      videoPlayer.requestFullscreen().catch(err => console.log('Fullscreen error', err));
+    } else document.exitFullscreen();
+  }
 
-        // Cargar lista desde URL
-        async function loadUrlPlaylist() {
-            const url = playlistUrl.value.trim();
-            if (!url) {
-                alert('Please enter a playlist URL');
-                return;
-            }
+  /* Populate quality selector with levels; choose handler to set level */
+  function populateQualitySelector(qualities) {
+    // Clear existing, keep Auto option
+    qualitySelector.innerHTML = '<option value="auto">Auto</option>';
+    qualities.forEach((q, idx) => {
+      const opt = document.createElement('option');
+      opt.value = idx; // level index for hls
+      opt.textContent = q;
+      qualitySelector.appendChild(opt);
+    });
+    // show/hide selector based on availability
+    qualitySelector.style.display = qualities.length ? 'inline-block' : 'none';
+  }
 
-            const proxyOption = document.querySelector('input[name="proxyOption"]:checked').value;
-            const proxiedUrl = getProxiedUrl(url, proxyOption);
-            
-            try {
-                loadUrlBtn.disabled = true;
-                loadUrlBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
-                
-                const response = await fetch(proxiedUrl);
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
-                
-                const content = await response.text();
-                
-                // Verificar que es un archivo M3U válido
-                if (!content.includes('#EXTM3U') && !content.includes('#EXTINF')) {
-                    throw new Error('This does not appear to be a valid M3U playlist');
-                }
-                
-                const channels = parseM3UContent(content);
-                
-                // Crear nueva lista
-                const newPlaylist = {
-                    id: Date.now(),
-                    name: `Playlist from URL - ${new Date().toLocaleDateString()}`,
-                    date: new Date().toLocaleDateString(),
-                    channels: channels
-                };
-                
-                // Añadir a playlists
-                playlists.unshift(newPlaylist);
-                localStorage.setItem('playlists', JSON.stringify(playlists));
-                
-                // Cargar canales
-                currentPlaylistId = newPlaylist.id;
-                currentPlaylist = channels;
-                renderGroups(channels);
-                renderPlaylists();
-                
-                // Cerrar modal y mostrar éxito
-                urlModal.style.display = 'none';
-                alert(`✅ Playlist loaded successfully with ${channels.length} channels`);
-                
-            } catch (error) {
-                console.error('URL Load Error:', error);
-                alert(`❌ Failed to load playlist: ${error.message}\n\nTry:\n• Different proxy option\n• Check if URL is correct\n• Verify the URL is accessible`);
-            } finally {
-                loadUrlBtn.disabled = false;
-                loadUrlBtn.innerHTML = '<i class="fas fa-download"></i> Load Playlist';
-                // Note: URL is NOT cleared - it remains in the input field
-            }
-        }
+  function onQualityChange() {
+    const val = qualitySelector.value;
+    if (!hls) return;
+    if (val === 'auto') {
+      hls.currentLevel = -1; // auto
+      showStatus('Quality set to Auto', 'success');
+    } else {
+      const lvl = parseInt(val,10);
+      if (!isNaN(lvl)) {
+        hls.currentLevel = lvl;
+        showStatus('Quality changed', 'success');
+      }
+    }
+  }
 
-        // Resto del código permanece igual...
-        // Cargar listas almacenadas
-        function loadStoredPlaylists() {
-            if (playlists.length > 0) {
-                currentPlaylistId = playlists[0].id;
-                currentPlaylist = playlists[0].channels || [];
-                renderGroups(currentPlaylist);
-                emptyChannels.classList.add('hidden');
-            }
-        }
+  /* ---------------------------
+     URL testing & loading (with proxy options)
+  ----------------------------*/
+  async function testUrl() {
+    const url = playlistUrl.value.trim();
+    if (!url) {
+      showInlineStatus('Please enter a URL', 'error', urlStatus);
+      return;
+    }
+    const proxyOption = document.querySelector('input[name="proxyOption"]:checked').value;
+    let testUrl = url;
+    try {
+      if (proxyOption !== 'direct') {
+        const proxyUrl = (proxyOption === 'custom') ? customProxyUrl : CORS_PROXIES[proxyOption];
+        if (!proxyUrl) throw new Error('Proxy URL not configured');
+        testUrl = proxyUrl + encodeURIComponent(url);
+      }
+      showInlineStatus('Testing URL...', 'warning', urlStatus);
+      testUrlBtn.disabled = true; loadUrlBtn.disabled = true;
+      const resp = await fetch(testUrl, { method: 'GET' });
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      showInlineStatus('✅ URL is accessible! You can now load the playlist.', 'success', urlStatus);
+    } catch (err) {
+      console.error('Test URL error', err);
+      showInlineStatus('❌ Failed to access URL: ' + (err.message || err), 'error', urlStatus);
+    } finally {
+      testUrlBtn.disabled = false; loadUrlBtn.disabled = false;
+    }
+  }
 
-        // Renderizar grupos y canales
-        function renderGroups(channels) {
-            groupsList.innerHTML = '';
-            
-            if (channels.length === 0) {
-                emptyChannels.classList.remove('hidden');
-                channelsCount.textContent = '0 channels';
-                return;
-            }
-            
-            emptyChannels.classList.add('hidden');
-            
-            // Filtrar canales por categoría
-            let filteredChannels = channels;
-            if (currentCategory === 'favorites') {
-                filteredChannels = channels.filter(channel => channel.isFavorite);
-            } else if (currentCategory !== 'all') {
-                filteredChannels = channels.filter(channel => 
-                    channel.group && channel.group.toLowerCase().includes(currentCategory)
-                );
-            }
-            
-            if (filteredChannels.length === 0) {
-                groupsList.innerHTML = `
-                    <div class="empty-state">
-                        <i class="fas fa-filter"></i>
-                        <h3>No channels in this category</h3>
-                        <p>Try selecting a different category</p>
-                    </div>
-                `;
-                channelsCount.textContent = '0 channels';
-                return;
-            }
-            
-            // Agrupar canales por categoría
-            const groups = {};
-            filteredChannels.forEach(channel => {
-                const group = channel.group || 'General';
-                if (!groups[group]) {
-                    groups[group] = [];
-                }
-                groups[group].push(channel);
-            });
-            
-            // Crear elementos de grupo
-            Object.keys(groups).forEach(groupName => {
-                const groupItem = document.createElement('div');
-                groupItem.className = 'group-item';
-                groupItem.innerHTML = `
-                    <div class="group-header">
-                        <div class="group-name">${groupName}</div>
-                        <div class="group-count">${groups[groupName].length}</div>
-                    </div>
-                    <div class="channels-list">
-                        ${groups[groupName].map(channel => `
-                            <div class="channel-item" data-channel-id="${channel.id}">
-                                <img src="${channel.logo || 'https://via.placeholder.com/30x30/3498db/ffffff?text=TV'}" 
-                                     alt="${channel.name}" class="channel-logo">
-                                <div class="channel-info">
-                                    <div class="channel-name">${channel.name}</div>
-                                    <div class="channel-resolution">${channel.resolution || 'HD'}</div>
-                                </div>
-                                <button class="favorite-btn ${channel.isFavorite ? 'active' : ''}" 
-                                        data-id="${channel.id}">
-                                    <i class="${channel.isFavorite ? 'fas' : 'far'} fa-heart"></i>
-                                </button>
-                            </div>
-                        `).join('')}
-                    </div>
-                `;
-                
-                // Evento para expandir/contraer grupo
-                const groupHeader = groupItem.querySelector('.group-header');
-                groupHeader.addEventListener('click', () => {
-                    document.querySelectorAll('.group-item.active').forEach(item => {
-                        if (item !== groupItem) item.classList.remove('active');
-                    });
-                    groupItem.classList.toggle('active');
-                });
-                
-                // Eventos para canales
-                const channelItems = groupItem.querySelectorAll('.channel-item');
-                channelItems.forEach(item => {
-                    item.addEventListener('click', (e) => {
-                        if (!e.target.classList.contains('favorite-btn')) {
-                            const channelId = parseInt(item.dataset.channelId);
-                            const channel = filteredChannels.find(c => c.id === channelId);
-                            if (channel) {
-                                playChannel(channel);
-                                document.querySelectorAll('.channel-item.active').forEach(i => {
-                                    i.classList.remove('active');
-                                });
-                                item.classList.add('active');
-                            }
-                        }
-                    });
-                    
-                    // Evento para favoritos
-                    const favoriteBtn = item.querySelector('.favorite-btn');
-                    favoriteBtn.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        const channelId = parseInt(favoriteBtn.dataset.id);
-                        toggleFavorite(channelId);
-                        const channel = filteredChannels.find(c => c.id === channelId);
-                        if (channel) {
-                            channel.isFavorite = !channel.isFavorite;
-                            favoriteBtn.classList.toggle('active');
-                            favoriteBtn.innerHTML = `<i class="${channel.isFavorite ? 'fas' : 'far'} fa-heart"></i>`;
-                            if (currentCategory === 'favorites') renderGroups(currentPlaylist);
-                        }
-                    });
-                });
-                
-                groupsList.appendChild(groupItem);
-            });
-            
-            channelsCount.textContent = `${filteredChannels.length} channel${filteredChannels.length !== 1 ? 's' : ''}`;
-            const firstGroup = groupsList.querySelector('.group-item');
-            if (firstGroup) firstGroup.classList.add('active');
-        }
+  async function loadUrlPlaylist() {
+    const url = playlistUrl.value.trim();
+    if (!url) {
+      showInlineStatus('Please enter a playlist URL', 'error', urlStatus);
+      return;
+    }
+    const proxyOption = document.querySelector('input[name="proxyOption"]:checked').value;
+    let fetchUrl = url;
+    try {
+      showInlineStatus('Loading playlist...', 'warning', urlStatus);
+      loadUrlBtn.disabled = true; testUrlBtn.disabled = true;
+      if (proxyOption !== 'direct') {
+        const proxyUrl = (proxyOption === 'custom') ? customProxyUrl : CORS_PROXIES[proxyOption];
+        if (!proxyUrl) throw new Error('Proxy URL not configured');
+        fetchUrl = proxyUrl + encodeURIComponent(url);
+      }
+      const resp = await fetch(fetchUrl);
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const content = await resp.text();
+      if (!content.includes('#EXTM3U') && !content.includes('#EXTINF')) {
+        throw new Error('This does not appear to be a valid M3U playlist');
+      }
+      const channels = parseM3UContent(content);
+      const newPlaylist = {
+        id: Date.now(),
+        name: `Playlist from URL - ${new Date().toLocaleDateString()}`,
+        date: new Date().toLocaleDateString(),
+        channels
+      };
+      playlists.unshift(newPlaylist);
+      await idbPut('playlists', newPlaylist);
+      currentPlaylistId = newPlaylist.id;
+      currentPlaylist = channels;
+      renderGroups(currentPlaylist);
+      renderPlaylistsUI();
+      urlModal.style.display = 'none';
+      document.body.style.overflow = 'auto';
+      showStatus(`✅ Playlist loaded successfully with ${channels.length} channels`, 'success');
+    } catch (err) {
+      console.error('Load URL error', err);
+      showInlineStatus(`❌ Failed to load playlist: ${err.message}`, 'error', urlStatus);
+    } finally {
+      loadUrlBtn.disabled = false; testUrlBtn.disabled = false;
+    }
+  }
 
-        // Resto de las funciones se mantienen igual...
-        // Renderizar listas de reproducción
-        function renderPlaylists() {
-            playlistsGrid.innerHTML = '';
-            
-            if (playlists.length === 0) {
-                emptyPlaylists.classList.remove('hidden');
-                return;
-            }
-            
-            emptyPlaylists.classList.add('hidden');
-            
-            playlists.forEach(playlist => {
-                const playlistCard = document.createElement('div');
-                playlistCard.className = `playlist-card ${playlist.id === currentPlaylistId ? 'active' : ''}`;
-                playlistCard.innerHTML = `
-                    <div class="playlist-icon">
-                        <i class="fas fa-list"></i>
-                    </div>
-                    <div class="playlist-info">
-                        <h4>${playlist.name}</h4>
-                        <p>${playlist.channels.length} channels</p>
-                        <p>Created: ${playlist.date}</p>
-                    </div>
-                    <div class="playlist-actions">
-                        <button class="btn btn-primary" data-id="${playlist.id}">Load</button>
-                        <button class="btn btn-outline" data-id="${playlist.id}">Edit</button>
-                        <button class="btn btn-outline" data-id="${playlist.id}">Delete</button>
-                    </div>
-                `;
-                
-                const buttons = playlistCard.querySelectorAll('.btn');
-                buttons[0].addEventListener('click', () => loadPlaylist(playlist.id));
-                buttons[1].addEventListener('click', () => editPlaylist(playlist.id));
-                buttons[2].addEventListener('click', () => deletePlaylist(playlist.id));
-                
-                playlistsGrid.appendChild(playlistCard);
-            });
-        }
+  /* ---------------------------
+     Custom proxy saving
+  ----------------------------*/
+  async function saveCustomProxy() {
+    const url = customProxyUrlInput.value.trim();
+    if (!url) {
+      showInlineStatus('Please enter a custom proxy URL', 'error', urlStatus);
+      return;
+    }
+    customProxyUrl = url;
+    CORS_PROXIES.custom = url;
+    await saveSetting('customProxyUrl', url);
+    showInlineStatus('Custom proxy URL saved successfully', 'success', urlStatus);
+  }
 
-        function createNewPlaylist() {
-            const name = prompt('Enter a name for your new playlist:');
-            if (name) {
-                const newPlaylist = {
-                    id: Date.now(),
-                    name: name,
-                    date: new Date().toLocaleDateString(),
-                    channels: []
-                };
-                playlists.unshift(newPlaylist);
-                localStorage.setItem('playlists', JSON.stringify(playlists));
-                renderPlaylists();
-                loadPlaylist(newPlaylist.id);
-            }
-        }
+  /* ---------------------------
+     Modal open/close
+  ----------------------------*/
+  function openUrlModal() {
+    urlModal.style.display = 'flex';
+    urlModal.setAttribute('aria-hidden','false');
+    document.body.style.overflow = 'hidden';
+    playlistUrl.focus();
+  }
+  function closeUrlModalFn() {
+    urlModal.style.display = 'none';
+    urlModal.setAttribute('aria-hidden','true');
+    document.body.style.overflow = 'auto';
+  }
 
-        function loadPlaylist(id) {
-            const playlist = playlists.find(p => p.id === id);
-            if (playlist) {
-                currentPlaylistId = id;
-                currentPlaylist = playlist.channels || [];
-                renderGroups(currentPlaylist);
-                renderPlaylists();
-            }
-        }
+  /* ---------------------------
+     Utility: show status
+  ----------------------------*/
+  function showStatus(message, type='success', timeout=4000) {
+    const el = document.createElement('div');
+    el.className = `status-message status-${type}`;
+    el.innerHTML = `<i class="fas fa-${type==='success'?'check-circle': type==='warning'?'exclamation-triangle':'exclamation-circle'}" aria-hidden="true"></i><span>${escapeHtml(message)}</span>`;
+    el.style.position = 'fixed'; el.style.top = '20px'; el.style.right = '20px'; el.style.zIndex = 1100; el.style.minWidth = '300px';
+    document.body.appendChild(el);
+    setTimeout(()=> el.remove(), timeout);
+  }
 
-        function editPlaylist(id) {
-            const playlist = playlists.find(p => p.id === id);
-            if (playlist) {
-                const newName = prompt('Enter new name for the playlist:', playlist.name);
-                if (newName) {
-                    playlist.name = newName;
-                    localStorage.setItem('playlists', JSON.stringify(playlists));
-                    renderPlaylists();
-                }
-            }
-        }
+  function showInlineStatus(message, type='success', container=urlStatus) {
+    container.innerHTML = '';
+    const s = document.createElement('div');
+    s.className = `status-message status-${type}`;
+    s.innerHTML = `<i class="fas fa-${type==='success'?'check-circle': type==='warning'?'exclamation-triangle':'exclamation-circle'}" aria-hidden="true"></i><span>${escapeHtml(message)}</span>`;
+    container.appendChild(s);
+  }
 
-        function deletePlaylist(id) {
-            if (confirm('Are you sure you want to delete this playlist?')) {
-                playlists = playlists.filter(p => p.id !== id);
-                localStorage.setItem('playlists', JSON.stringify(playlists));
-                renderPlaylists();
-                if (playlists.length === 0) {
-                    currentPlaylist = [];
-                    currentPlaylistId = null;
-                    renderGroups([]);
-                } else if (id === currentPlaylistId) {
-                    loadPlaylist(playlists[0].id);
-                }
-            }
-        }
+  /* ---------------------------
+     Escape HTML utility
+  ----------------------------*/
+  function escapeHtml(s){ return (s+'').replace(/[&<>"']/g, function(m){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]; }); }
 
-        function playChannel(channel) {
-            nowPlaying.textContent = `Now Playing: ${channel.name}`;
-            if (hls) hls.destroy();
-            videoPlayer.pause();
-            videoPlayer.src = channel.url;
-            
-            if (channel.url.includes('.m3u8')) {
-                if (Hls.isSupported()) {
-                    hls = new Hls();
-                    hls.loadSource(channel.url);
-                    hls.attachMedia(videoPlayer);
-                    hls.on(Hls.Events.MANIFEST_PARSED, function() {
-                        videoPlayer.play();
-                    });
-                } else if (videoPlayer.canPlayType('application/vnd.apple.mpegurl')) {
-                    videoPlayer.src = channel.url;
-                    videoPlayer.addEventListener('loadedmetadata', function() {
-                        videoPlayer.play();
-                    });
-                }
-            } else {
-                videoPlayer.src = channel.url;
-                videoPlayer.load();
-                videoPlayer.play();
-            }
-        }
+  /* ======================================================================
+     PROXY EXAMPLES (copy these to your server). They are comments in runtime
+     but here they are published for your convenience.
 
-        function playVideo() { videoPlayer.play(); }
-        function pauseVideo() { videoPlayer.pause(); }
-        function toggleFullscreen() {
-            if (!document.fullscreenElement) {
-                videoPlayer.requestFullscreen().catch(err => {
-                    console.log(`Fullscreen error: ${err.message}`);
-                });
-            } else {
-                document.exitFullscreen();
-            }
-        }
-        function changeQuality() {
-            console.log('Quality changed to:', qualitySelector.value);
-        }
+     PHP proxy (simple):
+     -------------------
+     <?php
+     // proxy.php
+     if (!isset($_GET['url'])) { http_response_code(400); echo 'No url'; exit; }
+     $url = $_GET['url'];
+     header('Access-Control-Allow-Origin: *');
+     $ch = curl_init($url);
+     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+     curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+     curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (StreamTV Proxy)');
+     $resp = curl_exec($ch);
+     $info = curl_getinfo($ch);
+     http_response_code($info['http_code'] ?? 200);
+     foreach (['content-type','content-length'] as $h) {
+       if (!empty($info[$h])) header($h.': '.$info[$h]);
+     }
+     echo $resp;
+     ?>
 
-        function handleFileUpload(event) {
-            const file = event.target.files[0];
-            if (file) parseM3UFile(file);
-        }
+     Node.js (Express) example:
+     --------------------------
+     // proxy.js
+     const express = require('express');
+     const fetch = require('node-fetch'); // or undici
+     const app = express();
+     app.get('/proxy', async (req,res)=>{
+       const url = req.query.url;
+       if (!url) return res.status(400).send('No url');
+       try {
+         const r = await fetch(url, { headers: { 'User-Agent': 'StreamTV-Proxy' }});
+         r.headers.forEach((v,k)=> res.setHeader(k,v));
+         res.status(r.status);
+         r.body.pipe(res);
+       } catch(err){
+         res.status(502).send('Upstream error');
+       }
+     });
+     app.listen(3000);
 
-        function handleFileDrop(event) {
-            event.preventDefault();
-            uploadArea.style.backgroundColor = '';
-            const files = event.dataTransfer.files;
-            if (files.length > 0) parseM3UFile(files[0]);
-        }
+     IMPORTANT: Expose your proxy only to authorized users or add rate-limits and abuse protection.
+     ====================================================================== */
 
-        function handleDragOver(event) {
-            event.preventDefault();
-            uploadArea.style.backgroundColor = 'rgba(52, 152, 219, 0.2)';
-        }
+  /* ---------------------------
+     Small helper: sanitize for display in console/UI
+  ----------------------------*/
+  function safeLog(...args){ try { console.log(...args); } catch(e){} }
 
-        function handleDragLeave() {
-            uploadArea.style.backgroundColor = '';
-        }
+  /* Expose a quick debug method */
+  window.__streamtv_debug = { playlists, favorites };
 
-        function parseM3UFile(file) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const content = e.target.result;
-                const channels = parseM3UContent(content);
-                const newPlaylist = {
-                    id: Date.now(),
-                    name: file.name.replace('.m3u', '').replace('.m3u8', ''),
-                    date: new Date().toLocaleDateString(),
-                    channels: channels
-                };
-                playlists.unshift(newPlaylist);
-                localStorage.setItem('playlists', JSON.stringify(playlists));
-                currentPlaylistId = newPlaylist.id;
-                currentPlaylist = channels;
-                renderGroups(channels);
-                renderPlaylists();
-                alert(`Playlist "${newPlaylist.name}" loaded successfully with ${channels.length} channels`);
-            };
-            reader.readAsText(file);
-        }
-
-        function parseM3UContent(content) {
-            const lines = content.split('\n');
-            const channels = [];
-            let currentChannel = {};
-            
-            for (let i = 0; i < lines.length; i++) {
-                const line = lines[i].trim();
-                
-                if (line.startsWith('#EXTINF:')) {
-                    const info = line.substring(8).split(',');
-                    currentChannel = {
-                        id: channels.length + 1,
-                        name: info[1] || `Channel ${channels.length + 1}`,
-                        group: 'General',
-                        url: '',
-                        logo: 'https://via.placeholder.com/30x30/3498db/ffffff?text=TV',
-                        resolution: 'HD',
-                        isFavorite: favorites.includes(channels.length + 1)
-                    };
-                    
-                    const groupMatch = line.match(/group-title="([^"]*)"/);
-                    if (groupMatch) currentChannel.group = groupMatch[1];
-                    
-                    const logoMatch = line.match(/tvg-logo="([^"]*)"/);
-                    if (logoMatch) currentChannel.logo = logoMatch[1];
-                } else if (line.startsWith('http')) {
-                    currentChannel.url = line;
-                    channels.push(currentChannel);
-                    currentChannel = {};
-                }
-            }
-            
-            return channels;
-        }
-
-        function toggleFavorite(channelId) {
-            const index = favorites.indexOf(channelId);
-            if (index > -1) {
-                favorites.splice(index, 1);
-            } else {
-                favorites.push(channelId);
-            }
-            localStorage.setItem('favorites', JSON.stringify(favorites));
-        }
-
-        function filterChannels() {
-            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-            document.querySelectorAll('.channel-item').forEach(item => {
-                const channelName = item.querySelector('.channel-name').textContent.toLowerCase();
-                item.style.display = channelName.includes(searchTerm) ? 'flex' : 'none';
-            });
-        }
-
-        function handleKeyPress(event) {
-            if (event.code === 'Space' && document.activeElement.tagName !== 'INPUT') {
-                event.preventDefault();
-                if (videoPlayer.paused) playVideo(); else pauseVideo();
-            }
-            if (event.code === 'KeyF' && document.activeElement.tagName !== 'INPUT') {
-                event.preventDefault();
-                toggleFullscreen();
-            }
-        }
-    </script>
+})();
+  </script>
 </body>
 </html>
