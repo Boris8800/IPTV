@@ -239,29 +239,27 @@
       });
     }
 
-    // Player buttons functionality
-    if (playBtn) {
-      playBtn.addEventListener('click', function () {
-        if (videoPlayer) videoPlayer.play();
-      });
+    // Robust player buttons functionality for deployment
+    if (playBtn && videoPlayer) {
+      playBtn.onclick = function () {
+        videoPlayer.play();
+      };
     }
-    if (pauseBtn) {
-      pauseBtn.addEventListener('click', function () {
-        if (videoPlayer) videoPlayer.pause();
-      });
+    if (pauseBtn && videoPlayer) {
+      pauseBtn.onclick = function () {
+        videoPlayer.pause();
+      };
     }
-    if (fullscreenBtn) {
-      fullscreenBtn.addEventListener('click', function () {
-        if (videoPlayer) {
-          if (videoPlayer.requestFullscreen) {
-            videoPlayer.requestFullscreen();
-          } else if (videoPlayer.webkitRequestFullscreen) {
-            videoPlayer.webkitRequestFullscreen();
-          } else if (videoPlayer.msRequestFullscreen) {
-            videoPlayer.msRequestFullscreen();
-          }
+    if (fullscreenBtn && videoPlayer) {
+      fullscreenBtn.onclick = function () {
+        if (videoPlayer.requestFullscreen) {
+          videoPlayer.requestFullscreen();
+        } else if (videoPlayer.webkitRequestFullscreen) {
+          videoPlayer.webkitRequestFullscreen();
+        } else if (videoPlayer.msRequestFullscreen) {
+          videoPlayer.msRequestFullscreen();
         }
-      });
+      };
     }
   });
 
