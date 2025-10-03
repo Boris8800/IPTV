@@ -14,5 +14,3 @@ It allows you to load an IPTV playlist (M3U) through a secure proxy (PHP) and pl
 - Easy to customize and extend (search, categories, favorites, etc.).
 
 ---
-
-## 📂 Project Structure
