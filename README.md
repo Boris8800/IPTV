@@ -1,6 +1,6 @@
 # IPTV
 https://boris8800.github.io/IPTV/
-VeraIPTV is a simple **web-based IPTV player**.  
+8800IPTV is a simple **web-based IPTV player**.  
 It allows you to load an IPTV playlist (M3U) through a secure proxy (PHP) and play TV channels directly in your browser.  
 
 ---
