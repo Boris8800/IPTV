@@ -989,7 +989,15 @@
 
   function enableMultiMode() {
     document.querySelector('.video-container').classList.add('hidden');
-    const mc = document.getElementById('multiContainer');
+    let mc = document.getElementById('multiContainer');
+    if (!mc) {
+      mc = document.createElement('div');
+      mc.id = 'multiContainer';
+      mc.className = 'multi-container';
+      // insert after the video container in the player section
+      const playerSection = document.querySelector('.player-section');
+      if (playerSection) playerSection.insertBefore(mc, playerSection.querySelector('.player-controls'));
+    }
     mc.classList.remove('hidden');
     if (addScreenBtn) addScreenBtn.style.display = 'inline-flex';
     if (tiles.length === 0) {
@@ -1005,7 +1013,7 @@
     if (ifr) ifr.remove();
     document.querySelector('.video-container').classList.remove('hidden');
     const mc = document.getElementById('multiContainer');
-    mc.classList.add('hidden');
+    if (mc) mc.classList.add('hidden');
     if (addScreenBtn) addScreenBtn.style.display = 'none';
     // destroy any hls instances and clear tiles
     tiles.forEach(t=>{ if (t.hls) { try { t.hls.destroy(); } catch(e){} } });
@@ -1038,7 +1046,15 @@
       updateTileHighlight();
     });
 
-    document.getElementById('multiContainer').appendChild(container);
+    let mc = document.getElementById('multiContainer');
+    if (!mc) {
+      mc = document.createElement('div');
+      mc.id = 'multiContainer';
+      mc.className = 'multi-container';
+      const playerSection = document.querySelector('.player-section');
+      if (playerSection) playerSection.insertBefore(mc, playerSection.querySelector('.player-controls'));
+    }
+    mc.appendChild(container);
     tiles.push({video, hls: null, channel: null});
     updateTileHighlight();
 
@@ -1056,7 +1072,7 @@
 
   function createMultiOverlay() {
     const mc = document.getElementById('multiContainer');
-    if (!mc) return;
+    if (!mc) return; // should not happen but guard
     if (document.getElementById('multiOverlayAdd')) return;
     const btn = document.createElement('button');
     btn.id = 'multiOverlayAdd';
