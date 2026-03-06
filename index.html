@@ -79,7 +79,8 @@
 
         <div class="video-container" role="region" aria-label="Video player">
           <video id="videoPlayer" controls aria-label="Video player">Your browser does not support the video element.</video>
-          <div class="player-controls" role="toolbar" aria-label="Player controls">
+        </div> <!-- close video-container -->
+        <div class="player-controls" role="toolbar" aria-label="Player controls">
           <div class="control-group">
             <button class="control-btn" id="playBtn" aria-label="Play"><i class="fas fa-play" aria-hidden="true"></i></button>
             <button class="control-btn" id="pauseBtn" aria-label="Pause"><i class="fas fa-pause" aria-hidden="true"></i></button>
@@ -99,8 +100,8 @@
               <option value="auto">Auto</option>
             </select>
           </div>
-        </div> <!-- close player-controls inside video-container -->
-        </div> <!-- close video-container -->
+        </div>
+        </div> <!-- keep closing for video-container replaced earlier -->
         <div class="multi-container hidden" id="multiContainer"></div>
       </section>
     </div>

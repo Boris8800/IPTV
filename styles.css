@@ -377,11 +377,12 @@ video {
   background: rgba(0,0,0,0.4);
   border-radius: 6px;
   box-shadow: 0 2px 4px rgba(0,0,0,0.5);
-  position: absolute;
-  bottom: 64px; /* moved down four lanes as requested */
-  left: 50%;
-  transform: translateX(-50%);
-  width: calc(100% - 32px);
+  /* positioned below the player now */
+  position: relative;
+  margin-top: 8px;
+  width: 100%;
+  left: auto;
+  transform: none;
 }
 
 .video-container { position: relative; }
