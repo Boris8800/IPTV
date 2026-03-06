@@ -239,15 +239,35 @@ header {
   width: 100%;
   aspect-ratio: 16/9;
   background-color: #000;
-  border-radius: 8px;
+  border-radius: 12px;
   overflow: hidden;
   margin-bottom: 15px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.5);
 }
 
 #videoPlayer {
   width: 100%;
   height: 100%;
   background-color: #000;
+  border-radius: 8px;
+}
+
+/* big overlay play icon */
+.video-container.playing::after {
+  content: '';
+  display: none;
+}
+.video-container.paused::after {
+  content: '\f04b'; /* FontAwesome play icon */
+  font-family: 'Font Awesome 5 Free';
+  font-weight: 900;
+  font-size: 80px;
+  color: rgba(255,255,255,0.7);
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
 }
 
 /* --- SIDEBAR MÓVIL MEJORADA --- */
@@ -331,6 +351,10 @@ header {
   flex-shrink: 0;
   flex-wrap: wrap;
   gap: 10px;
+  padding: 8px 12px;
+  background: rgba(0,0,0,0.3);
+  border-radius: 6px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.5);
 }
 
 .control-group { 
@@ -343,14 +367,18 @@ header {
   background: rgba(255,255,255,0.1); 
   border: none; 
   color: white; 
-  width: 36px; 
-  height: 36px; 
+  width: 40px; 
+  height: 40px; 
   border-radius: 50%; 
   display: flex; 
   align-items: center; 
   justify-content: center; 
   cursor: pointer; 
   transition: var(--transition); 
+}
+.control-btn:hover { 
+  background: rgba(255,255,255,0.2);
+  transform: scale(1.1);
 }
 
 .quality-selector { 
