@@ -26,13 +26,15 @@ body {
   color: var(--light); 
   line-height: 1.6; 
   overflow-x: hidden; 
-  /* hide vertical scrollbar */
-  overflow-y: hidden;
+  /* allow vertical scrolling */
+  overflow-y: auto;
 }
 
-/* hide any scrollbars whenever overflow is necessary */
-*::-webkit-scrollbar { width: 0 !important; background: transparent !important; }
-* { scrollbar-width: none; -ms-overflow-style: none; }
+/* keep custom scroll for sidebar */
+.channels-sidebar { overflow-y: auto; }
+
+/* retain hidden scrollbar aesthetics only where desired */
+.channels-list::-webkit-scrollbar { width: 0; }
 
 .container { 
   max-width: 1400px; 
