@@ -1163,11 +1163,15 @@
         iframe.style.height = '100%';
         iframe.style.border = '0';
         iframe.allow = 'autoplay; encrypted-media';
+        iframe.onerror = function() {
+          showStatus('YouTube embed failed; please open channel in new tab', 'error', 5000);
+        };
         container.appendChild(iframe);
       }
       const vidId = channel.url.split('v=')[1] || '';
-      const embedUrl = 'https://www.youtube.com/embed/' + vidId + '?autoplay=1';
+      const embedUrl = 'https://www.youtube.com/embed/' + vidId + '?autoplay=1&mute=1';
       iframe.src = embedUrl;
+      // if player throws error message inside iframe, user will see it; otherwise consider opening externally
       showStatus(`Playing ${channel.name}`, 'info', 3000);
       return;
     }
