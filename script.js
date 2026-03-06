@@ -97,7 +97,11 @@
   ];
   let favorites = new Set(); // Cambiar a Set para mejor rendimiento
   let currentPlaylistId = null;
-  let currentPlaylist = [];
+  // start with two example channels for demonstration
+  let currentPlaylist = [
+    { id: 'ex-sky', name: 'Sky News', url: 'https://www.youtube.com/channel/UCoMdktPbSTixAyNGwb-UYkQ/live', group: 'Examples' },
+    { id: 'ex-fr24', name: 'France 24 English', url: 'https://www.youtube.com/channel/UCQfwfsi5VrQ8yKZ-UWmAEFg/live', group: 'Examples' }
+  ];
   let currentCategory = 'all';
   let hls = null;
     let currentChannelId = null;
