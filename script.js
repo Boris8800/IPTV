@@ -923,6 +923,11 @@
       return;
     }
     showStatus(`Retrying ${channel.name}...`, 'warning', 2500);
+    if (channel.url && channel.url.includes('youtube.com')) {
+      // force reload of iframe by timestamp
+      reloadAllPlayers();
+      return;
+    }
     playChannel(channel);
     highlightActiveChannel(channel.id);
   }
@@ -1138,7 +1143,8 @@
         '&enablejsapi=1' +
         '&controls=1' +
         '&modestbranding=1' +
-        '&rel=0';
+        '&rel=0' +
+        '&_=' + Date.now();
       iframe.src = tileUrl;
       tiles[idx].channel = channel;
       return;
@@ -1249,7 +1255,8 @@
         '&enablejsapi=1' +
         '&controls=1' +
         '&modestbranding=1' +
-        '&rel=0';
+        '&rel=0' +
+        '&_=' + Date.now();
       iframe.src = embedUrl;
       // if player throws error message inside iframe, user will see it; otherwise consider opening externally
       showStatus(`Playing ${channel.name}`, 'info', 3000);
@@ -1501,6 +1508,36 @@
   }
 
   function escapeHtml(s){ return (s+'').replace(/[&<>"']/g, function(m){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]; }); }
+
+  // YouTube error listener and reload utilities
+  function setupYouTubeErrorHandling() {
+    if (window.__ytErrorHandlerInstalled) return;
+    window.__ytErrorHandlerInstalled = true;
+    window.addEventListener('message', function(event) {
+      if (event.origin !== 'https://www.youtube.com') return;
+      try {
+        const data = JSON.parse(event.data);
+        if (data.event === 'onError' || (data.event === 'onStateChange' && data.info === -1)) {
+          console.warn('YouTube iframe reported error');
+          reloadAllPlayers();
+        }
+      } catch (e) {
+        // ignore
+      }
+    });
+  }
+
+  function reloadAllPlayers() {
+    document.querySelectorAll('iframe').forEach(iframe => {
+      if (iframe.src && iframe.src.includes('youtube.com')) {
+        const base = iframe.src.split('&_=')[0];
+        iframe.src = base + '&_=' + Date.now();
+      }
+    });
+  }
+
+  setInterval(reloadAllPlayers, 30000);
+  setupYouTubeErrorHandling();
 
   window.__streamtv_debug = { playlists, favorites };
 
