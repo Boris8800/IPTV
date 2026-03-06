@@ -243,6 +243,13 @@ header {
   overflow: hidden;
   margin-bottom: 15px;
   box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+  min-height: 360px; /* ensures bigger single player area */
+}
+
+@media (min-width: 900px) {
+  .video-container {
+    min-height: 60vh;
+  }
 }
 
 #videoPlayer {
