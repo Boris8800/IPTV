@@ -966,6 +966,10 @@
   }
 
   function disableMultiMode() {
+    // remove any embedded YouTube iframe from main container
+    const container = videoPlayer.parentElement;
+    const ifr = container.querySelector('iframe.youtube-frame');
+    if (ifr) ifr.remove();
     document.querySelector('.video-container').classList.remove('hidden');
     const mc = document.getElementById('multiContainer');
     mc.classList.add('hidden');
@@ -1082,6 +1086,28 @@
 
   function playChannelInTile(channel, idx) {
     if (!tiles[idx]) return;
+    // embed youtube inside tile if necessary
+    if (channel.url && channel.url.includes('youtube.com')) {
+      const {video} = tiles[idx];
+      // remove any iframe existing
+      let iframe = video.parentElement.querySelector('iframe.youtube-frame');
+      if (!iframe) {
+        iframe = document.createElement('iframe');
+        iframe.className = 'youtube-frame';
+        iframe.style.position = 'absolute';
+        iframe.style.top = '0';
+        iframe.style.left = '0';
+        iframe.style.width = '100%';
+        iframe.style.height = '100%';
+        iframe.style.border = '0';
+        iframe.allow = 'autoplay; encrypted-media';
+        video.parentElement.appendChild(iframe);
+      }
+      const vidId = channel.url.split('v=')[1] || '';
+      iframe.src = 'https://www.youtube.com/embed/' + vidId + '?autoplay=1';
+      tiles[idx].channel = channel;
+      return;
+    }
     tiles[idx].channel = channel;
     nowPlaying.textContent = `Tile ${idx+1}: ${channel.name}`;
     const {video, hls: oldHls} = tiles[idx];
@@ -1119,10 +1145,30 @@
      Player & hls.js integration
   ----------------------------*/
   function playChannel(channel) {
-    // if the source is a YouTube link, open separately
+    // if the source is a YouTube link, embed via iframe
     if (channel.url && channel.url.includes('youtube.com')) {
-      showStatus('Opening YouTube stream in new tab', 'info');
-      window.open(channel.url, '_blank');
+      const container = videoPlayer.parentElement;
+      // remove existing hls or src
+      try { if (hls) { hls.destroy(); hls = null; } } catch(e){}
+      videoPlayer.src = '';
+      // remove any existing iframe
+      let iframe = container.querySelector('iframe.youtube-frame');
+      if (!iframe) {
+        iframe = document.createElement('iframe');
+        iframe.className = 'youtube-frame';
+        iframe.style.position = 'absolute';
+        iframe.style.top = '0';
+        iframe.style.left = '0';
+        iframe.style.width = '100%';
+        iframe.style.height = '100%';
+        iframe.style.border = '0';
+        iframe.allow = 'autoplay; encrypted-media';
+        container.appendChild(iframe);
+      }
+      const vidId = channel.url.split('v=')[1] || '';
+      const embedUrl = 'https://www.youtube.com/embed/' + vidId + '?autoplay=1';
+      iframe.src = embedUrl;
+      showStatus(`Playing ${channel.name}`, 'info', 3000);
       return;
     }
     if (multiMode) {
