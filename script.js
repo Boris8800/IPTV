@@ -77,13 +77,13 @@
   let currentPlaylist = [];
   let currentCategory = 'all';
   let hls = null;
-  let currentChannelId = null;
-  let currentChannelIndex = -1;
-  let autoNextOnFail = true;
-  let playbackWatchdog = null;
-  let activePlaybackToken = 0;
-  let handledFailureToken = -1;
-  let customProxyUrl = null;
+    let currentChannelId = null;
+    let currentChannelIndex = -1;
+    let autoNextOnFail = true;
+    let playbackWatchdog = null;
+    let activePlaybackToken = 0;
+    let handledFailureToken = -1;
+    let retryCount = 0;
   const CHANNEL_RENDER_BATCH = 60;
 
   /* ---------------------------
@@ -91,13 +91,13 @@
   ----------------------------*/
   const videoPlayer = document.getElementById('videoPlayer');
   const playBtn = document.getElementById('playBtn');
-  const pauseBtn = document.getElementById('pauseBtn');
   const retryBtn = document.getElementById('retryBtn');
   const nextBtn = document.getElementById('nextBtn');
+  const pauseBtn = document.getElementById('pauseBtn');
   const fullscreenBtn = document.getElementById('fullscreenBtn');
   const qualitySelector = document.getElementById('qualitySelector');
-  const autoNextOnFailToggle = document.getElementById('autoNextOnFail');
   const nowPlaying = document.getElementById('nowPlaying');
+  const autoNextOnFailToggle = document.getElementById('autoNextOnFail');
   const groupsList = document.getElementById('groupsList');
   const channelsCount = document.getElementById('channelsCount');
   const uploadArea = document.getElementById('uploadArea');
@@ -253,19 +253,15 @@
         videoPlayer.play();
       };
     }
+    if (retryBtn) {
+      retryBtn.onclick = retryCurrentChannel;
+    }
+    if (nextBtn) {
+      nextBtn.onclick = () => playNextChannel(false);
+    }
     if (pauseBtn && videoPlayer) {
       pauseBtn.onclick = function () {
         videoPlayer.pause();
-      };
-    }
-    if (retryBtn) {
-      retryBtn.onclick = function () {
-        retryCurrentChannel();
-      };
-    }
-    if (nextBtn) {
-      nextBtn.onclick = function () {
-        playNextChannel(false);
       };
     }
     if (fullscreenBtn && videoPlayer) {
@@ -279,14 +275,12 @@
         }
       };
     }
-
     if (autoNextOnFailToggle) {
       autoNextOnFail = autoNextOnFailToggle.checked;
       autoNextOnFailToggle.addEventListener('change', function() {
         autoNextOnFail = autoNextOnFailToggle.checked;
       });
     }
-
     if (videoPlayer) {
       videoPlayer.addEventListener('playing', clearPlaybackWatchdog);
       videoPlayer.addEventListener('loadeddata', clearPlaybackWatchdog);
@@ -703,7 +697,8 @@
           chEl.addEventListener('click', (e) => {
             if (e.target.closest('.favorite-btn')) return;
             playChannel(ch);
-            highlightActiveChannel(ch.id);
+            channelsListEl.querySelectorAll('.channel-item.active').forEach(i=>i.classList.remove('active'));
+            chEl.classList.add('active');
           });
           chEl.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' || e.key === ' ') chEl.click();
@@ -886,7 +881,14 @@
     handledFailureToken = token;
     clearPlaybackWatchdog();
 
-    if (autoNextOnFail && playNextChannel(true)) {
+    if (autoNextOnFail) {
+      if (retryCount < 5) {
+        retryCount++;
+        showStatus(`Auto-retrying ${channel.name} (${retryCount}/5)...`, 'warning', 2500);
+        playChannel(channel);
+        return;
+      }
+      playNextChannel(true);
       return;
     }
 
@@ -898,37 +900,20 @@
      Player & hls.js integration
   ----------------------------*/
   function playChannel(channel) {
-    if (!channel || !channel.url) {
-      showStatus('Channel has no valid stream URL', 'error');
-      return;
-    }
-
+    // set active channel state
     currentChannelId = channel.id || null;
     currentChannelIndex = resolveChannelIndex(channel);
-    nowPlaying.textContent = `Now Playing: ${channel.name}`;
-    const playbackToken = ++activePlaybackToken;
+    retryCount = 0;
+    activePlaybackToken++;
     handledFailureToken = -1;
-    clearPlaybackWatchdog();
 
+    nowPlaying.textContent = `Now Playing: ${channel.name}`;
     if (hls) {
       try { hls.destroy(); } catch(e){}
       hls = null;
     }
-
-    videoPlayer.pause();
-    videoPlayer.removeAttribute('src');
-    videoPlayer.load();
-
+    
     populateQualitySelector([]);
-
-    const startPlayback = () => {
-      const playPromise = videoPlayer.play();
-      if (playPromise && typeof playPromise.catch === 'function') {
-        playPromise.catch(err => {
-          handlePlaybackFailure((err && err.message) ? err.message : 'cannot start playback', channel, playbackToken);
-        });
-      }
-    };
 
     if (channel.url && channel.url.includes('.m3u8')) {
       if (Hls.isSupported()) {
@@ -940,55 +925,39 @@
         hls.attachMedia(videoPlayer);
 
         hls.on(Hls.Events.MANIFEST_PARSED, function() {
-          if (playbackToken !== activePlaybackToken) return;
           const levels = hls.levels || [];
           const qualities = levels.map(l => (l.height ? `${l.height}p` : `${l.bitrate || 'unknown'}bps`));
           populateQualitySelector(qualities);
-          startPlayback();
+          videoPlayer.play().catch(()=>{});
         });
 
         hls.on(Hls.Events.LEVEL_UPDATED, () => {
-          if (playbackToken !== activePlaybackToken) return;
           const levels = hls.levels || [];
           const qualities = levels.map(l => (l.height ? `${l.height}p` : `${l.bitrate || 'unknown'}bps`));
           populateQualitySelector(qualities);
         });
 
         hls.on(Hls.Events.ERROR, function(event, data) {
-          if (playbackToken !== activePlaybackToken) return;
           console.warn('HLS error', data);
-          if (!data.fatal) return;
-
-          if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
-            try { hls.recoverMediaError(); } catch (e) {}
-          } else if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
-            try { hls.startLoad(); } catch (e) {}
+          if (data.fatal) {
+            showStatus('Playback error: ' + data.type, 'error');
+            try {
+              hls.recoverMediaError();
+            } catch(e){}
           }
-
-          setTimeout(() => {
-            if (playbackToken !== activePlaybackToken) return;
-            if (videoPlayer.error || videoPlayer.readyState < 2) {
-              handlePlaybackFailure(`HLS ${data.type}`, channel, playbackToken);
-            }
-          }, 1500);
         });
-
-        startPlaybackWatchdog(channel, playbackToken);
       } else if (videoPlayer.canPlayType('application/vnd.apple.mpegurl')) {
         videoPlayer.src = channel.url;
         videoPlayer.addEventListener('loadedmetadata', function() {
-          if (playbackToken !== activePlaybackToken) return;
-          startPlayback();
+          videoPlayer.play();
         }, { once: true });
-        startPlaybackWatchdog(channel, playbackToken);
       } else {
-        handlePlaybackFailure('HLS not supported in this browser', channel, playbackToken);
+        showStatus('HLS not supported in this browser', 'error');
       }
     } else {
       videoPlayer.src = channel.url;
       videoPlayer.load();
-      startPlayback();
-      startPlaybackWatchdog(channel, playbackToken);
+      videoPlayer.play().catch(()=>{});
     }
   }
 
