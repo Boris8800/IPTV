@@ -1126,30 +1126,7 @@
     // embed youtube inside tile if necessary
     if (channel.url && channel.url.includes('youtube.com')) {
       const {video} = tiles[idx];
-      // remove any iframe existing
-      let iframe = video.parentElement.querySelector('iframe.youtube-frame');
-      if (!iframe) {
-        iframe = document.createElement('iframe');
-        iframe.className = 'youtube-frame';
-        iframe.style.position = 'absolute';
-        iframe.style.top = '0';
-        iframe.style.left = '0';
-        iframe.style.width = '100%';
-        iframe.style.height = '100%';
-        iframe.style.border = '0';
-        iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
-        video.parentElement.appendChild(iframe);
-      }
-      const vidId = channel.url.split('v=')[1] || '';
-      const tileUrl = 'https://www.youtube.com/embed/' + vidId +
-        '?autoplay=1' +
-        '&mute=1' +
-        '&enablejsapi=1' +
-        '&controls=1' +
-        '&modestbranding=1' +
-        '&rel=0' +
-        '&_=' + Date.now();
-      iframe.src = tileUrl;
+      createYouTubePlayer(channel, video.parentElement);
       tiles[idx].channel = channel;
       return;
     }
@@ -1227,42 +1204,100 @@
     return url;
   }
 
-  function playChannel(channel) {
-    // if the source is a YouTube link, embed via iframe
-    if (channel.url && channel.url.includes('youtube.com')) {
-      const container = videoPlayer.parentElement;
-      // remove existing hls or src
-      try { if (hls) { hls.destroy(); hls = null; } } catch(e){}
-      videoPlayer.src = '';
-      // remove any existing iframe
-      let iframe = container.querySelector('iframe.youtube-frame');
-      if (!iframe) {
-        iframe = document.createElement('iframe');
-        iframe.className = 'youtube-frame';
-        iframe.style.position = 'absolute';
-        iframe.style.top = '0';
-        iframe.style.left = '0';
-        iframe.style.width = '100%';
-        iframe.style.height = '100%';
-        iframe.style.border = '0';
-        iframe.allow = 'autoplay; encrypted-media';
-        iframe.onerror = function() {
-          showStatus('YouTube embed failed; please open channel in new tab', 'error', 5000);
-        };
-        container.appendChild(iframe);
+  // extract a video ID from a YouTube URL (v= param or last path segment)
+  function extractVideoIdFromUrl(url) {
+    if (!url) return '';
+    try {
+      const u = new URL(url);
+      const v = u.searchParams.get('v');
+      if (v) return v;
+      const parts = u.pathname.split('/').filter(Boolean);
+      return parts.pop() || '';
+    } catch(e) {
+      // fallback regex
+      const m = url.match(/v=([A-Za-z0-9_-]+)/);
+      return m ? m[1] : '';
+    }
+  }
+
+  // main YouTube embed routine with multiple format attempts and error fallback
+  function createYouTubePlayer(channel, container) {
+    if (!container) return;
+    container.innerHTML = '';
+    const loadingDiv = document.createElement('div');
+    loadingDiv.className = 'loading-message';
+    loadingDiv.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Cargando stream...';
+    loadingDiv.style.padding = '20px';
+    loadingDiv.style.textAlign = 'center';
+    container.appendChild(loadingDiv);
+
+    const channelId = channel.url.includes('youtube.com') ?
+      extractChannelIdFromUrl(channel.url) : '';
+    const videoId = extractVideoIdFromUrl(channel.url);
+
+    const iframe = document.createElement('iframe');
+    iframe.width = '100%';
+    iframe.height = '100%';
+    iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
+    iframe.referrerpolicy = 'strict-origin-when-cross-origin';
+    iframe.allowFullscreen = true;
+
+    let retryCount = 0;
+    function tryNextFormat() {
+      retryCount++;
+      if (retryCount === 1) {
+        iframe.src = `https://www.youtube.com/embed/live_stream?channel=${channelId}&autoplay=1&mute=1`;
+      } else if (retryCount === 2) {
+        iframe.src = `https://www.youtube.com/embed/?listType=user_uploads&list=${channelId}&autoplay=1&mute=1`;
+      } else if (retryCount === 3 && videoId) {
+        iframe.src = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1`;
+      } else if (retryCount === 4) {
+        // proxy fallback
+        const proxy = 'https://corsproxy.io/?';
+        iframe.src = proxy + encodeURIComponent(`https://www.youtube.com/embed/live_stream?channel=${channelId}&autoplay=1&mute=1`);
+      } else {
+        // give up
+        container.innerHTML = `
+          <div style="text-align:center; padding:40px; color:#ffaa66;">
+              <i class="fas fa-exclamation-triangle" style="font-size:48px;"></i>
+              <h3>No se puede reproducir</h3>
+              <p>El canal puede estar offline o restringido</p>
+              <button onclick="createYouTubePlayer(${JSON.stringify(channel)}, '${container.id}')" 
+                      style="background:#e64545; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer;">
+                  <i class="fas fa-redo"></i> Reintentar
+              </button>
+          </div>
+        `;
       }
-      const vidId = channel.url.split('v=')[1] || '';
-      // build embed URL with autoplay and required parameters
-      const embedUrl = 'https://www.youtube.com/embed/' + vidId +
-        '?autoplay=1' +
-        '&mute=1' +
-        '&enablejsapi=1' +
-        '&controls=1' +
-        '&modestbranding=1' +
-        '&rel=0' +
-        '&_=' + Date.now();
-      iframe.src = embedUrl;
-      // if player throws error message inside iframe, user will see it; otherwise consider opening externally
+    }
+
+    // initial attempt plus timeout-based retry
+    tryNextFormat();
+    setTimeout(() => {
+      if (retryCount === 1) tryNextFormat();
+    }, 5000);
+
+    container.innerHTML = '';
+    container.appendChild(iframe);
+  }
+
+  // extract channel id from a YouTube channel URL (last segment)
+  function extractChannelIdFromUrl(url) {
+    if (!url) return '';
+    try {
+      const u = new URL(url);
+      const parts = u.pathname.split('/').filter(Boolean);
+      return parts.pop() || '';
+    } catch(e) {
+      const m = url.match(/channel\/([A-Za-z0-9_-]+)/);
+      return m ? m[1] : '';
+    }
+  }
+
+  function playChannel(channel) {
+    // if the source is a YouTube link, delegate to the helper
+    if (channel.url && channel.url.includes('youtube.com')) {
+      createYouTubePlayer(channel, videoPlayer.parentElement);
       showStatus(`Playing ${channel.name}`, 'info', 3000);
       return;
     }
