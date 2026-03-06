@@ -802,6 +802,20 @@
 
       groupsList.appendChild(groupItem);
     });
+
+    // if the user is viewing the live category, expand the first group and
+    // trigger a click on the first channel so playback begins automatically
+    if (currentCategory === 'youtube') {
+      setTimeout(() => {
+        const firstGroup = groupsList.querySelector('.group-item');
+        if (firstGroup) {
+          const header = firstGroup.querySelector('.group-header');
+          if (header && !firstGroup.classList.contains('active')) header.click();
+          const firstCh = firstGroup.querySelector('.channel-item');
+          if (firstCh) firstCh.click();
+        }
+      }, 50);
+    }
   }
 
   /* ---------------------------
@@ -1266,7 +1280,7 @@
           const levels = hls.levels || [];
           const qualities = levels.map(l => (l.height ? `${l.height}p` : `${l.bitrate || 'unknown'}bps`));
           populateQualitySelector(qualities);
-          videoPlayer.play().catch(()=>{});
+          attemptPlay();
         });
 
         hls.on(Hls.Events.LEVEL_UPDATED, () => {
@@ -1295,12 +1309,23 @@
     } else {
       videoPlayer.src = sourceUrl || channel.url;
       videoPlayer.load();
-      videoPlayer.play().catch(()=>{});
+      attemptPlay();
     }
   }
 
-  function playVideo() { videoPlayer.play().catch(()=>{}); }
+  // try to play the video, with a mute fallback to satisfy browser autoplay policies
+  function attemptPlay() {
+    if (!videoPlayer) return;
+    videoPlayer.play().catch(err => {
+      // if blocked, mute and retry once
+      videoPlayer.muted = true;
+      videoPlayer.play().catch(()=>{});
+    });
+  }
+
+  function playVideo() { attemptPlay(); }
   function pauseVideo() { videoPlayer.pause(); }
+
   function toggleFullscreen() {
     if (!document.fullscreenElement) {
       videoPlayer.requestFullscreen().catch(err => console.log('Fullscreen error', err));
