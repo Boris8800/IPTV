@@ -986,6 +986,12 @@ header {
   gap: 4px;
   z-index: 20;
 }
+
+/* when a tile is focused, make it span the grid */
+.tile-focused {
+  grid-column: span 2 !important;
+  grid-row: span 2 !important;
+}
 .tile-btn {
   background: rgba(0,0,0,0.5);
   border: none;

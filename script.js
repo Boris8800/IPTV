@@ -969,7 +969,8 @@
 
     // button event wiring
     ctrl.querySelector('.delete-btn').onclick = () => removeTile(parseInt(video.dataset.index));
-    ctrl.querySelector('.expand-btn').onclick = () => expandTile(parseInt(video.dataset.index));
+    const expBtn = ctrl.querySelector('.expand-btn');
+    expBtn.onclick = () => toggleFocusTile(parseInt(video.dataset.index));
   }
 
   function updateTileHighlight() {
@@ -1017,11 +1018,23 @@
     updateTileHighlight();
   }
 
+  // previously expandTile; now replaced by focus behaviour
   function expandTile(idx) {
     if (!tiles[idx] || !tiles[idx].channel) return;
     const ch = tiles[idx].channel;
     disableMultiMode();
     playChannel(ch);
+  }
+
+  function toggleFocusTile(idx) {
+    const container = document.querySelector(`.multi-player:nth-child(${idx+1})`);
+    if (!container) return;
+    const focused = container.classList.toggle('tile-focused');
+    const btn = container.querySelector('.expand-btn');
+    if (btn) {
+      btn.title = focused ? 'Unfocus' : 'Focus';
+      btn.innerHTML = focused ? '<i class="fas fa-compress"></i>' : '<i class="fas fa-expand"></i>';
+    }
   }
 
   function removeMultiOverlay() {
