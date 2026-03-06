@@ -72,6 +72,7 @@
      App State
   ----------------------------*/
   let playlists = [];
+  const CORS_PROXY = 'https://corsproxy.io/?';
   // predefined YouTube live news channels
   const YOUTUBE_LIVE_CHANNELS = [
      { id: 'yt-cnn', name: 'CNN Live', url: 'https://www.youtube.com/channel/UCoMdktPbSTixAyNGwb-UYkQ/live', group: 'YouTube', lang: 'en' },
@@ -1129,7 +1130,9 @@
     if (channel.url && channel.url.includes('.m3u8')) {
       if (Hls.isSupported()) {
         newHls = new Hls({ enableWorker: true, autoStartLoad: true });
-        newHls.loadSource(channel.url);
+        // tile playback also respects the proxy constant
+        const tileUrl = getProxiedUrl(channel.url);
+        newHls.loadSource(tileUrl);
         newHls.attachMedia(video);
         newHls.on(Hls.Events.MANIFEST_PARSED, function() {
           video.play().catch(()=>{});
@@ -1154,9 +1157,45 @@
     tiles[idx].hls = newHls;
   }
 
+  // error recovery when video element fails
+  function attemptFailover() {
+    // if there is no playlist or no current url, nothing to do
+    if (!currentPlaylist || !currentPlaylist.length) return;
+    const currentUrl = videoPlayer.src || '';
+    if (!currentUrl) return;
+    const i = currentPlaylist.findIndex(c => currentUrl.includes(c.url));
+    if (i === -1) return;
+    const next = currentPlaylist[(i + 1) % currentPlaylist.length];
+    if (next) {
+      console.log('Failover switching to', next.name);
+      playChannel(next);
+    }
+  }
+
+  if (videoPlayer) {
+    videoPlayer.addEventListener('error', () => {
+      console.log('Stream failed, attempting failover');
+      attemptFailover();
+    });
+  }
+
   /* ---------------------------
      Player & hls.js integration
   ----------------------------*/
+  // helper to insert CORS proxy when needed
+  function getProxiedUrl(url) {
+    if (!url || typeof url !== 'string') return url;
+    // don't proxy YouTube or already proxied URLs
+    if (url.includes('youtube.com') || url.startsWith('blob:') || url.startsWith('data:')) {
+      return url;
+    }
+    // only proxy http/https URLs
+    if (url.startsWith('http')) {
+      return CORS_PROXY + encodeURIComponent(url);
+    }
+    return url;
+  }
+
   function playChannel(channel) {
     // if the source is a YouTube link, embed via iframe
     if (channel.url && channel.url.includes('youtube.com')) {
@@ -1192,6 +1231,7 @@
       playChannelInTile(channel, activeTileIndex);
       return;
     }
+
     // set active channel state for single player
     currentChannelId = channel.id || null;
     currentChannelIndex = resolveChannelIndex(channel);
@@ -1207,13 +1247,19 @@
     
     populateQualitySelector([]);
 
+    // compute the URL we'll actually load (may go through proxy)
+    let sourceUrl = channel.url;
+    if (sourceUrl) {
+      sourceUrl = getProxiedUrl(sourceUrl);
+    }
+
     if (channel.url && channel.url.includes('.m3u8')) {
       if (Hls.isSupported()) {
         hls = new Hls({
           enableWorker: true,
           autoStartLoad: true
         });
-        hls.loadSource(channel.url);
+        hls.loadSource(sourceUrl);
         hls.attachMedia(videoPlayer);
 
         hls.on(Hls.Events.MANIFEST_PARSED, function() {
@@ -1239,7 +1285,7 @@
           }
         });
       } else if (videoPlayer.canPlayType('application/vnd.apple.mpegurl')) {
-        videoPlayer.src = channel.url;
+        videoPlayer.src = sourceUrl;
         videoPlayer.addEventListener('loadedmetadata', function() {
           videoPlayer.play();
         }, { once: true });
@@ -1247,7 +1293,7 @@
         showStatus('HLS not supported in this browser', 'error');
       }
     } else {
-      videoPlayer.src = channel.url;
+      videoPlayer.src = sourceUrl || channel.url;
       videoPlayer.load();
       videoPlayer.play().catch(()=>{});
     }

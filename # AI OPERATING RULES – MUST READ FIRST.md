@@ -37,10 +37,7 @@ All instructions from the user MUST be interpreted through this file first and a
    - style  
    - file structure  
 
-7.a Suggestions and improvements ⚠️ are **allowed** when:
-   - the user explicitly asks for ideas, tips, or refactoring
-   - or when the context clearly indicates that advice would help resolve a problem
-   *However*, never implement a suggestion unless the user gives permission.  Suggestions are optional and must not change the original content unilaterally.
+7.a Suggestions  ⚠️ are **allowed**   Suggestions are optional and must not change the original content unilaterally.
 
 ---
 

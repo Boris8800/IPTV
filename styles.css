@@ -243,15 +243,22 @@ header {
 }
 
 .video-container {
+  background: #0b0e14;
+  border-radius: 24px;
+  padding: 15px;
+  margin: 20px;
+  box-shadow: 0 20px 30px -10px black;
+  border: 1px solid #2f354a;
   position: relative;
   width: 100%;
   aspect-ratio: 16/9;
   background-color: #000;
-  border-radius: 12px;
   overflow: hidden;
-  margin-bottom: 15px;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.5);
   min-height: 360px; /* ensures bigger single player area */
+}
+video {
+  border-radius: 16px;
+  background: black;
 }
 
 @media (min-width: 900px) {
@@ -941,6 +948,50 @@ header {
 
   .playlist-actions-main {
     flex-direction: row;
+  }
+
+  /* playlist input group card */
+  .playlist-input-group {
+    background: #1a1f2c;
+    border-radius: 60px;
+    padding: 5px;
+    border: 1px solid #373f57;
+    display: flex;
+    margin: 20px;
+  }
+  .playlist-input-group input {
+    background: transparent;
+    border: none;
+    padding: 15px 20px;
+    color: white;
+    flex: 1;
+    outline: none;
+  }
+  .playlist-input-group button {
+    background: #e64545;
+    border: none;
+    border-radius: 60px;
+    padding: 10px 30px;
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+  }
+
+  /* app header styling */
+  .app-header {
+    background: linear-gradient(145deg, #1a1e2b, #0f121c);
+    padding: 1rem 2rem;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    border-bottom: 1px solid #2f354a;
+  }
+  .logo {
+    font-size: 1.8rem;
+    color: #e03a3a;
+  }
+
   }
 
   .playlist-actions-main .btn {
