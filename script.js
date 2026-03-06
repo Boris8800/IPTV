@@ -253,6 +253,19 @@
       });
     }
 
+    // quick load playlist input below header
+    const quickLoadBtn = document.getElementById('quickLoadBtn');
+    const quickUrlInput = document.getElementById('quickPlaylistUrl');
+    if (quickLoadBtn && quickUrlInput) {
+      quickLoadBtn.addEventListener('click', async () => {
+        const url = quickUrlInput.value.trim();
+        if (url) {
+          playlistUrl.value = url;
+          await loadUrlPlaylist();
+        }
+      });
+    }
+
     categoryTabs.forEach(tab => {
       tab.addEventListener('click', () => {
         categoryTabs.forEach(t => t.classList.remove('active'));
