@@ -957,15 +957,19 @@ header {
 /* multi-screen layout */
 .multi-container {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(45%, 1fr));
-  grid-auto-rows: 1fr; /* ensure each row fills available space */
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-rows: 1fr;
   gap: 8px;
   width: 100%;
-  height: calc(100% - 40px);
+  aspect-ratio: 16 / 9;
+  min-height: 260px;
+  margin-bottom: 15px;
+  overflow: auto;
 }
 .multi-player {
   position: relative;
   background: #000;
+  min-height: 0;
 }
 .multi-player video {
   width: 100%;
