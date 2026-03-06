@@ -958,7 +958,7 @@ header {
 .multi-container {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(45%, 1fr));
-  grid-auto-rows: 0;
+  grid-auto-rows: 1fr; /* ensure each row fills available space */
   gap: 8px;
   width: 100%;
   height: calc(100% - 40px);
