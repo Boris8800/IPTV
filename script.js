@@ -124,7 +124,6 @@
   const retryBtn = document.getElementById('retryBtn');
   const nextBtn = document.getElementById('nextBtn');
   const multiBtn = document.getElementById('multiBtn');
-  const downloadIconsBtn = document.getElementById('downloadIconsBtn');
   const addScreenBtn = document.getElementById('addScreenBtn');
   const pauseBtn = document.getElementById('pauseBtn');
   const fullscreenBtn = document.getElementById('fullscreenBtn');
@@ -881,32 +880,6 @@
     return null;
   }
 
-  async function downloadChannelIcons() {
-    let list = currentCategory === 'youtube' ? YOUTUBE_LIVE_CHANNELS : currentPlaylist;
-    if (!list || list.length === 0) {
-      showStatus('No channels available to download icons', 'warning');
-      return;
-    }
-    for (const ch of list) {
-      if (!ch.logo) continue;
-      try {
-        const resp = await fetch(ch.logo);
-        const blob = await resp.blob();
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        const safeName = (ch.name || ch.id).replace(/[^a-z0-9]/gi, '_').toLowerCase();
-        a.download = `${safeName}.png`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(a.href);
-      } catch (err) {
-        console.error('Icon download failed for', ch, err);
-      }
-    }
-    showStatus('Icon download initiated', 'success');
-  }
-
   function highlightActiveChannel(channelId) {
     document.querySelectorAll('.channel-item.active').forEach(item => item.classList.remove('active'));
     if (!channelId) return;
@@ -1146,6 +1119,12 @@
      Player & hls.js integration
   ----------------------------*/
   function playChannel(channel) {
+    // if the source is a YouTube link, open separately
+    if (channel.url && channel.url.includes('youtube.com')) {
+      showStatus('Opening YouTube stream in new tab', 'info');
+      window.open(channel.url, '_blank');
+      return;
+    }
     if (multiMode) {
       playChannelInTile(channel, activeTileIndex);
       return;
