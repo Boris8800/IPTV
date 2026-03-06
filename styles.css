@@ -26,7 +26,13 @@ body {
   color: var(--light); 
   line-height: 1.6; 
   overflow-x: hidden; 
+  /* hide vertical scrollbar */
+  overflow-y: hidden;
 }
+
+/* hide any scrollbars whenever overflow is necessary */
+*::-webkit-scrollbar { width: 0 !important; background: transparent !important; }
+* { scrollbar-width: none; -ms-overflow-style: none; }
 
 .container { 
   max-width: 1400px; 
