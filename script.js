@@ -946,14 +946,30 @@
     const video = document.createElement('video');
     video.controls = true;
     video.dataset.index = tiles.length;
+
+    // overlay controls for this tile
+    const ctrl = document.createElement('div');
+    ctrl.className = 'tile-controls';
+    ctrl.innerHTML = `
+      <button class="tile-btn delete-btn" title="Remove screen"><i class="fas fa-trash"></i></button>
+      <button class="tile-btn expand-btn" title="View full"><i class="fas fa-expand"></i></button>
+    `;
+    container.appendChild(ctrl);
+
     container.appendChild(video);
-    container.addEventListener('click', () => {
+    container.addEventListener('click', (e) => {
+      if (e.target.closest('.tile-btn')) return; // ignore clicks on controls
       activeTileIndex = parseInt(video.dataset.index);
       updateTileHighlight();
     });
+
     document.getElementById('multiContainer').appendChild(container);
-    tiles.push({video, hls: null});
+    tiles.push({video, hls: null, channel: null});
     updateTileHighlight();
+
+    // button event wiring
+    ctrl.querySelector('.delete-btn').onclick = () => removeTile(parseInt(video.dataset.index));
+    ctrl.querySelector('.expand-btn').onclick = () => expandTile(parseInt(video.dataset.index));
   }
 
   function updateTileHighlight() {
@@ -974,6 +990,40 @@
     mc.appendChild(btn);
   }
 
+  function removeTile(idx) {
+    if (!tiles[idx]) return;
+    // destroy hls if exists
+    if (tiles[idx].hls) {
+      try { tiles[idx].hls.destroy(); } catch(e){}
+    }
+    // remove DOM element
+    const container = document.querySelector(`.multi-player:nth-child(${idx+1})`);
+    if (container && container.parentElement) container.parentElement.removeChild(container);
+    tiles.splice(idx, 1);
+    // reindex remaining
+    tiles.forEach((t,i)=>{
+      const vid = t.video;
+      vid.dataset.index = i;
+      const parent = vid.parentElement;
+      if (parent) {
+        const ctrl = parent.querySelector('.tile-controls');
+        if (ctrl) {
+          ctrl.querySelector('.delete-btn').onclick = () => removeTile(i);
+          ctrl.querySelector('.expand-btn').onclick = () => expandTile(i);
+        }
+      }
+    });
+    if (activeTileIndex >= tiles.length) activeTileIndex = tiles.length - 1;
+    updateTileHighlight();
+  }
+
+  function expandTile(idx) {
+    if (!tiles[idx] || !tiles[idx].channel) return;
+    const ch = tiles[idx].channel;
+    disableMultiMode();
+    playChannel(ch);
+  }
+
   function removeMultiOverlay() {
     const btn = document.getElementById('multiOverlayAdd');
     if (btn && btn.parentElement) btn.parentElement.removeChild(btn);
@@ -981,6 +1031,7 @@
 
   function playChannelInTile(channel, idx) {
     if (!tiles[idx]) return;
+    tiles[idx].channel = channel;
     nowPlaying.textContent = `Tile ${idx+1}: ${channel.name}`;
     const {video, hls: oldHls} = tiles[idx];
     if (oldHls) { try { oldHls.destroy(); } catch(e){} }
