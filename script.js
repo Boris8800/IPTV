@@ -77,6 +77,12 @@
   let currentPlaylist = [];
   let currentCategory = 'all';
   let hls = null;
+  let currentChannelId = null;
+  let currentChannelIndex = -1;
+  let autoNextOnFail = true;
+  let playbackWatchdog = null;
+  let activePlaybackToken = 0;
+  let handledFailureToken = -1;
   let customProxyUrl = null;
   const CHANNEL_RENDER_BATCH = 60;
 
@@ -86,8 +92,11 @@
   const videoPlayer = document.getElementById('videoPlayer');
   const playBtn = document.getElementById('playBtn');
   const pauseBtn = document.getElementById('pauseBtn');
+  const retryBtn = document.getElementById('retryBtn');
+  const nextBtn = document.getElementById('nextBtn');
   const fullscreenBtn = document.getElementById('fullscreenBtn');
   const qualitySelector = document.getElementById('qualitySelector');
+  const autoNextOnFailToggle = document.getElementById('autoNextOnFail');
   const nowPlaying = document.getElementById('nowPlaying');
   const groupsList = document.getElementById('groupsList');
   const channelsCount = document.getElementById('channelsCount');
@@ -249,6 +258,16 @@
         videoPlayer.pause();
       };
     }
+    if (retryBtn) {
+      retryBtn.onclick = function () {
+        retryCurrentChannel();
+      };
+    }
+    if (nextBtn) {
+      nextBtn.onclick = function () {
+        playNextChannel(false);
+      };
+    }
     if (fullscreenBtn && videoPlayer) {
       fullscreenBtn.onclick = function () {
         if (videoPlayer.requestFullscreen) {
@@ -259,6 +278,29 @@
           videoPlayer.msRequestFullscreen();
         }
       };
+    }
+
+    if (autoNextOnFailToggle) {
+      autoNextOnFail = autoNextOnFailToggle.checked;
+      autoNextOnFailToggle.addEventListener('change', function() {
+        autoNextOnFail = autoNextOnFailToggle.checked;
+      });
+    }
+
+    if (videoPlayer) {
+      videoPlayer.addEventListener('playing', clearPlaybackWatchdog);
+      videoPlayer.addEventListener('loadeddata', clearPlaybackWatchdog);
+      videoPlayer.addEventListener('waiting', () => {
+        const currentChannel = getCurrentChannel();
+        if (currentChannel && activePlaybackToken > 0) {
+          startPlaybackWatchdog(currentChannel, activePlaybackToken);
+        }
+      });
+      videoPlayer.addEventListener('error', () => {
+        if (activePlaybackToken > 0) {
+          handlePlaybackFailure(getVideoErrorMessage(), getCurrentChannel(), activePlaybackToken);
+        }
+      });
     }
   });
 
@@ -661,8 +703,7 @@
           chEl.addEventListener('click', (e) => {
             if (e.target.closest('.favorite-btn')) return;
             playChannel(ch);
-            channelsListEl.querySelectorAll('.channel-item.active').forEach(i=>i.classList.remove('active'));
-            chEl.classList.add('active');
+            highlightActiveChannel(ch.id);
           });
           chEl.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' || e.key === ' ') chEl.click();
@@ -746,17 +787,148 @@
     renderGroups(filtered);
   }
 
+  function clearPlaybackWatchdog() {
+    if (playbackWatchdog) {
+      clearTimeout(playbackWatchdog);
+      playbackWatchdog = null;
+    }
+  }
+
+  function startPlaybackWatchdog(channel, token) {
+    clearPlaybackWatchdog();
+    playbackWatchdog = setTimeout(() => {
+      if (token !== activePlaybackToken) return;
+      if (videoPlayer.readyState < 2) {
+        handlePlaybackFailure('timeout', channel, token);
+      }
+    }, 12000);
+  }
+
+  function getVideoErrorMessage() {
+    if (!videoPlayer || !videoPlayer.error) return 'unknown error';
+    const code = videoPlayer.error.code;
+    if (code === 1) return 'playback aborted';
+    if (code === 2) return 'network error';
+    if (code === 3) return 'decode error';
+    if (code === 4) return 'unsupported format';
+    return 'video error';
+  }
+
+  function resolveChannelIndex(channel) {
+    if (!channel || !currentPlaylist || currentPlaylist.length === 0) return -1;
+    if (channel.id) {
+      const idxById = currentPlaylist.findIndex(ch => ch.id === channel.id);
+      if (idxById !== -1) return idxById;
+    }
+    if (channel.url) {
+      return currentPlaylist.findIndex(ch => ch.url === channel.url);
+    }
+    return -1;
+  }
+
+  function getCurrentChannel() {
+    if (currentChannelIndex >= 0 && currentChannelIndex < currentPlaylist.length) {
+      return currentPlaylist[currentChannelIndex];
+    }
+    if (currentChannelId) {
+      return currentPlaylist.find(ch => ch.id === currentChannelId) || null;
+    }
+    return null;
+  }
+
+  function highlightActiveChannel(channelId) {
+    document.querySelectorAll('.channel-item.active').forEach(item => item.classList.remove('active'));
+    if (!channelId) return;
+    const safeId = String(channelId).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+    const item = document.querySelector(`.channel-item[data-channel-id="${safeId}"]`);
+    if (item) item.classList.add('active');
+  }
+
+  function retryCurrentChannel() {
+    const channel = getCurrentChannel();
+    if (!channel) {
+      showStatus('No selected channel to retry', 'warning');
+      return;
+    }
+    showStatus(`Retrying ${channel.name}...`, 'warning', 2500);
+    playChannel(channel);
+    highlightActiveChannel(channel.id);
+  }
+
+  function playNextChannel(fromFailure) {
+    if (!currentPlaylist || currentPlaylist.length === 0) {
+      if (!fromFailure) showStatus('No channels in current playlist', 'warning');
+      return false;
+    }
+
+    const nextIndex = currentChannelIndex >= 0 ? currentChannelIndex + 1 : 0;
+    if (nextIndex >= currentPlaylist.length) {
+      if (fromFailure) {
+        showStatus('Playback failed and there are no more channels to try', 'error', 5000);
+      } else {
+        showStatus('Reached end of playlist', 'warning');
+      }
+      return false;
+    }
+
+    const nextChannel = currentPlaylist[nextIndex];
+    if (fromFailure) {
+      showStatus(`Trying next channel: ${nextChannel.name}`, 'warning', 3500);
+    }
+    playChannel(nextChannel);
+    highlightActiveChannel(nextChannel.id);
+    return true;
+  }
+
+  function handlePlaybackFailure(reason, channel, token) {
+    if (token !== activePlaybackToken) return;
+    if (handledFailureToken === token) return;
+    handledFailureToken = token;
+    clearPlaybackWatchdog();
+
+    if (autoNextOnFail && playNextChannel(true)) {
+      return;
+    }
+
+    const reasonText = reason ? `: ${reason}` : '';
+    showStatus(`Playback failed${reasonText}. Use Retry or Next.`, 'error', 6000);
+  }
+
   /* ---------------------------
      Player & hls.js integration
   ----------------------------*/
   function playChannel(channel) {
+    if (!channel || !channel.url) {
+      showStatus('Channel has no valid stream URL', 'error');
+      return;
+    }
+
+    currentChannelId = channel.id || null;
+    currentChannelIndex = resolveChannelIndex(channel);
     nowPlaying.textContent = `Now Playing: ${channel.name}`;
+    const playbackToken = ++activePlaybackToken;
+    handledFailureToken = -1;
+    clearPlaybackWatchdog();
+
     if (hls) {
       try { hls.destroy(); } catch(e){}
       hls = null;
     }
-    
+
+    videoPlayer.pause();
+    videoPlayer.removeAttribute('src');
+    videoPlayer.load();
+
     populateQualitySelector([]);
+
+    const startPlayback = () => {
+      const playPromise = videoPlayer.play();
+      if (playPromise && typeof playPromise.catch === 'function') {
+        playPromise.catch(err => {
+          handlePlaybackFailure((err && err.message) ? err.message : 'cannot start playback', channel, playbackToken);
+        });
+      }
+    };
 
     if (channel.url && channel.url.includes('.m3u8')) {
       if (Hls.isSupported()) {
@@ -768,39 +940,55 @@
         hls.attachMedia(videoPlayer);
 
         hls.on(Hls.Events.MANIFEST_PARSED, function() {
+          if (playbackToken !== activePlaybackToken) return;
           const levels = hls.levels || [];
           const qualities = levels.map(l => (l.height ? `${l.height}p` : `${l.bitrate || 'unknown'}bps`));
           populateQualitySelector(qualities);
-          videoPlayer.play().catch(()=>{});
+          startPlayback();
         });
 
         hls.on(Hls.Events.LEVEL_UPDATED, () => {
+          if (playbackToken !== activePlaybackToken) return;
           const levels = hls.levels || [];
           const qualities = levels.map(l => (l.height ? `${l.height}p` : `${l.bitrate || 'unknown'}bps`));
           populateQualitySelector(qualities);
         });
 
         hls.on(Hls.Events.ERROR, function(event, data) {
+          if (playbackToken !== activePlaybackToken) return;
           console.warn('HLS error', data);
-          if (data.fatal) {
-            showStatus('Playback error: ' + data.type, 'error');
-            try {
-              hls.recoverMediaError();
-            } catch(e){}
+          if (!data.fatal) return;
+
+          if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+            try { hls.recoverMediaError(); } catch (e) {}
+          } else if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+            try { hls.startLoad(); } catch (e) {}
           }
+
+          setTimeout(() => {
+            if (playbackToken !== activePlaybackToken) return;
+            if (videoPlayer.error || videoPlayer.readyState < 2) {
+              handlePlaybackFailure(`HLS ${data.type}`, channel, playbackToken);
+            }
+          }, 1500);
         });
+
+        startPlaybackWatchdog(channel, playbackToken);
       } else if (videoPlayer.canPlayType('application/vnd.apple.mpegurl')) {
         videoPlayer.src = channel.url;
         videoPlayer.addEventListener('loadedmetadata', function() {
-          videoPlayer.play();
+          if (playbackToken !== activePlaybackToken) return;
+          startPlayback();
         }, { once: true });
+        startPlaybackWatchdog(channel, playbackToken);
       } else {
-        showStatus('HLS not supported in this browser', 'error');
+        handlePlaybackFailure('HLS not supported in this browser', channel, playbackToken);
       }
     } else {
       videoPlayer.src = channel.url;
       videoPlayer.load();
-      videoPlayer.play().catch(()=>{});
+      startPlayback();
+      startPlaybackWatchdog(channel, playbackToken);
     }
   }
 

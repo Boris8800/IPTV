@@ -75,11 +75,17 @@
           <div class="control-group">
             <button class="control-btn" id="playBtn" aria-label="Play"><i class="fas fa-play" aria-hidden="true"></i></button>
             <button class="control-btn" id="pauseBtn" aria-label="Pause"><i class="fas fa-pause" aria-hidden="true"></i></button>
+            <button class="control-btn" id="retryBtn" aria-label="Retry channel"><i class="fas fa-rotate-right" aria-hidden="true"></i></button>
+            <button class="control-btn" id="nextBtn" aria-label="Next channel"><i class="fas fa-forward" aria-hidden="true"></i></button>
             <button class="control-btn" id="fullscreenBtn" aria-label="Fullscreen"><i class="fas fa-expand" aria-hidden="true"></i></button>
           </div>
           <div class="control-group">
             <button class="control-btn" id="subtitlesBtn" aria-label="Subtitles"><i class="fas fa-closed-captioning" aria-hidden="true"></i></button>
             <button class="control-btn" id="settingsBtn" aria-label="Settings"><i class="fas fa-cog" aria-hidden="true"></i></button>
+            <label class="autonext-toggle" for="autoNextOnFail">
+              <input type="checkbox" id="autoNextOnFail" checked>
+              <span>Auto next if fail</span>
+            </label>
             <select class="quality-selector" id="qualitySelector" aria-label="Quality selector">
               <option value="auto">Auto</option>
             </select>

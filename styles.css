@@ -362,6 +362,21 @@ header {
   font-size: 13px;
 }
 
+.autonext-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 12px;
+  color: var(--light);
+}
+
+.autonext-toggle input {
+  accent-color: var(--primary);
+}
+
 /* --- SECCIONES INFERIORES MÓVIL --- */
 .playlists-section,
 .upload-section {
