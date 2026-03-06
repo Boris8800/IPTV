@@ -84,6 +84,9 @@
     let activePlaybackToken = 0;
     let handledFailureToken = -1;
     let retryCount = 0;
+    let multiMode = false;
+    let activeTileIndex = 0;
+    const tiles = []; // will hold {video,hls}
   const CHANNEL_RENDER_BATCH = 60;
 
   /* ---------------------------
@@ -93,6 +96,8 @@
   const playBtn = document.getElementById('playBtn');
   const retryBtn = document.getElementById('retryBtn');
   const nextBtn = document.getElementById('nextBtn');
+  const multiBtn = document.getElementById('multiBtn');
+  const addScreenBtn = document.getElementById('addScreenBtn');
   const pauseBtn = document.getElementById('pauseBtn');
   const fullscreenBtn = document.getElementById('fullscreenBtn');
   const qualitySelector = document.getElementById('qualitySelector');
@@ -258,6 +263,12 @@
     }
     if (nextBtn) {
       nextBtn.onclick = () => playNextChannel(false);
+    }
+    if (multiBtn) {
+      multiBtn.onclick = toggleMultiMode;
+    }
+    if (addScreenBtn) {
+      addScreenBtn.onclick = createTile;
     }
     if (pauseBtn && videoPlayer) {
       pauseBtn.onclick = function () {
@@ -897,10 +908,100 @@
   }
 
   /* ---------------------------
+     Multi‑screen helpers
+  ----------------------------*/
+  function toggleMultiMode() {
+    multiMode = !multiMode;
+    if (multiMode) enableMultiMode();
+    else disableMultiMode();
+  }
+
+  function enableMultiMode() {
+    document.querySelector('.video-container').classList.add('hidden');
+    document.getElementById('multiContainer').classList.remove('hidden');
+    if (addScreenBtn) addScreenBtn.style.display = 'inline-flex';
+    if (tiles.length === 0) {
+      for (let i = 0; i < 4; i++) createTile();
+    }
+  }
+
+  function disableMultiMode() {
+    document.querySelector('.video-container').classList.remove('hidden');
+    const mc = document.getElementById('multiContainer');
+    mc.classList.add('hidden');
+    if (addScreenBtn) addScreenBtn.style.display = 'none';
+    // destroy any hls instances and clear tiles
+    tiles.forEach(t=>{ if (t.hls) { try { t.hls.destroy(); } catch(e){} } });
+    tiles.length = 0;
+    mc.innerHTML = '';
+    activeTileIndex = 0;
+  }
+
+  function createTile() {
+    const container = document.createElement('div');
+    container.className = 'multi-player';
+    const video = document.createElement('video');
+    video.controls = true;
+    video.dataset.index = tiles.length;
+    container.appendChild(video);
+    container.addEventListener('click', () => {
+      activeTileIndex = parseInt(video.dataset.index);
+      updateTileHighlight();
+    });
+    document.getElementById('multiContainer').appendChild(container);
+    tiles.push({video, hls: null});
+    updateTileHighlight();
+  }
+
+  function updateTileHighlight() {
+    document.querySelectorAll('.multi-player').forEach((c,i)=>{
+      c.style.border = i===activeTileIndex ? '2px solid var(--primary)' : '2px solid transparent';
+    });
+  }
+
+  function playChannelInTile(channel, idx) {
+    if (!tiles[idx]) return;
+    nowPlaying.textContent = `Tile ${idx+1}: ${channel.name}`;
+    const {video, hls: oldHls} = tiles[idx];
+    if (oldHls) { try { oldHls.destroy(); } catch(e){} }
+    let newHls = null;
+    if (channel.url && channel.url.includes('.m3u8')) {
+      if (Hls.isSupported()) {
+        newHls = new Hls({ enableWorker: true, autoStartLoad: true });
+        newHls.loadSource(channel.url);
+        newHls.attachMedia(video);
+        newHls.on(Hls.Events.MANIFEST_PARSED, function() {
+          video.play().catch(()=>{});
+        });
+        newHls.on(Hls.Events.ERROR, function(event,data){
+          console.warn('HLS error in tile', idx, data);
+          if (data.fatal) {
+            try { newHls.recoverMediaError(); } catch(e){}
+          }
+        });
+      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        video.src = channel.url;
+        video.addEventListener('loadedmetadata', function h() {
+          video.removeEventListener('loadedmetadata', h);
+          video.play().catch(()=>{});
+        });
+      }
+    } else {
+      video.src = channel.url;
+      video.play().catch(()=>{});
+    }
+    tiles[idx].hls = newHls;
+  }
+
+  /* ---------------------------
      Player & hls.js integration
   ----------------------------*/
   function playChannel(channel) {
-    // set active channel state
+    if (multiMode) {
+      playChannelInTile(channel, activeTileIndex);
+      return;
+    }
+    // set active channel state for single player
     currentChannelId = channel.id || null;
     currentChannelIndex = resolveChannelIndex(channel);
     retryCount = 0;
