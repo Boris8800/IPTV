@@ -74,9 +74,26 @@
   let playlists = [];
   // predefined YouTube live news channels
   const YOUTUBE_LIVE_CHANNELS = [
-     { id: 'yt-cnn', name: 'CNN Live', url: 'https://www.youtube.com/watch?v=21X5lGlDOfg', group: 'YouTube' },
-     { id: 'yt-bbc', name: 'BBC News Live', url: 'https://www.youtube.com/watch?v=0xrC1jpkofY', group: 'YouTube' },
-     { id: 'yt-aljazeera', name: 'Al Jazeera English Live', url: 'https://www.youtube.com/watch?v=jULqlQqIyrI', group: 'YouTube' }
+     { id: 'yt-cnn', name: 'CNN Live', url: 'https://www.youtube.com/channel/UCoMdktPbSTixAyNGwb-UYkQ/live', group: 'YouTube', lang: 'en' },
+     { id: 'yt-france24', name: 'France 24 English', url: 'https://www.youtube.com/channel/UCQfwfsi5VrQ8yKZ-UWmAEFg/live', group: 'YouTube', lang: 'en' },
+     { id: 'yt-dw', name: 'DW News', url: 'https://www.youtube.com/channel/UCknLrEdhRCp1aegoMqRaCZg/live', group: 'YouTube', lang: 'en' },
+     { id: 'yt-bloomberg', name: 'Bloomberg', url: 'https://www.youtube.com/channel/UCIALMKvObZNtJ6AmdCLP7Lg/live', group: 'YouTube', lang: 'en' },
+     { id: 'yt-aljazeera-eng', name: 'Al Jazeera English', url: 'https://www.youtube.com/channel/UCNye-wNBqNL5ZzHSJj3l8Bg/live', group: 'YouTube', lang: 'en' },
+     { id: 'yt-abc', name: 'ABC News', url: 'https://www.youtube.com/channel/UCBi2mrWuNuyYy4gbM6fU18Q/live', group: 'YouTube', lang: 'en' },
+     { id: 'yt-cbs', name: 'CBS News', url: 'https://www.youtube.com/channel/UC8p1vwvWtl6T73JiExfWs1g/live', group: 'YouTube', lang: 'en' },
+     { id: 'yt-nbc', name: 'NBC News', url: 'https://www.youtube.com/channel/UCeY0bbntWzzVIaj2z3QigXg/live', group: 'YouTube', lang: 'en' },
+     { id: 'yt-wion', name: 'WION', url: 'https://www.youtube.com/channel/UC_gUM8rL-Lrg6O3adPW9K1g/live', group: 'YouTube', lang: 'en' },
+     { id: 'yt-trt', name: 'TRT World', url: 'https://www.youtube.com/channel/UC7fWeaHhqgM4Ry-RMpM2YYw/live', group: 'YouTube', lang: 'en' },
+     { id: 'yt-nhk', name: 'NHK World', url: 'https://www.youtube.com/channel/UCVYamHliCI9rw1tHR1xbkfw/live', group: 'YouTube', lang: 'en' },
+     { id: 'yt-nasa', name: 'NASA', url: 'https://www.youtube.com/channel/UCLA_DiR1FfKNvjuUpBHmylQ/live', group: 'YouTube', lang: 'en' },
+     { id: 'yt-nasa-space', name: 'NASA Spaceflight', url: 'https://www.youtube.com/channel/UCSUu1lih2RifWkKtDOJdsBA/live', group: 'YouTube', lang: 'en' },
+     { id: 'yt-weather', name: 'Weather News', url: 'https://www.youtube.com/channel/UCNsidkYpIA0gS1HUY8xP8ag/live', group: 'YouTube', lang: 'en' },
+     { id: 'yt-euronews', name: 'EuroNews', url: 'https://www.youtube.com/channel/UCSrZ3UV4jOidv8ppoVuvW9Q/live', group: 'YouTube', lang: 'en' },
+     { id: 'yt-telesur', name: 'TeleSUR', url: 'https://www.youtube.com/channel/UCmuTmply7Fz6F_JF4D3Z-2Q/live', group: 'YouTube', lang: 'es' },
+     { id: 'yt-ndtv', name: 'NDTV', url: 'https://www.youtube.com/channel/UCZFMm1mMw0F81Z37aaEzTUA/live', group: 'YouTube', lang: 'en' },
+     { id: 'yt-india-today', name: 'India Today', url: 'https://www.youtube.com/channel/UCYPvAwZP8pZhSMW8qs7cVCw/live', group: 'YouTube', lang: 'en' },
+     { id: 'yt-aaj-tak', name: 'Aaj Tak', url: 'https://www.youtube.com/channel/UCt4t-jeY85JegMlZ-E5UWtA/live', group: 'YouTube', lang: 'en' },
+     { id: 'yt-zee-news', name: 'Zee News', url: 'https://www.youtube.com/channel/UC16niRr50-MSBwiO3YDb3RA/live', group: 'YouTube', lang: 'en' }
   ];
   let favorites = new Set(); // Cambiar a Set para mejor rendimiento
   let currentPlaylistId = null;
