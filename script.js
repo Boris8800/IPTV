@@ -72,6 +72,12 @@
      App State
   ----------------------------*/
   let playlists = [];
+  // predefined YouTube live news channels
+  const YOUTUBE_LIVE_CHANNELS = [
+     { id: 'yt-cnn', name: 'CNN Live', url: 'https://www.youtube.com/watch?v=21X5lGlDOfg', group: 'YouTube' },
+     { id: 'yt-bbc', name: 'BBC News Live', url: 'https://www.youtube.com/watch?v=0xrC1jpkofY', group: 'YouTube' },
+     { id: 'yt-aljazeera', name: 'Al Jazeera English Live', url: 'https://www.youtube.com/watch?v=jULqlQqIyrI', group: 'YouTube' }
+  ];
   let favorites = new Set(); // Cambiar a Set para mejor rendimiento
   let currentPlaylistId = null;
   let currentPlaylist = [];
@@ -244,7 +250,15 @@
           renderGroups(currentPlaylist);
           return;
         }
-        // Filter by channel name
+        // support youtube category search
+        if (currentCategory === 'youtube') {
+          const filtered = YOUTUBE_LIVE_CHANNELS.filter(ch =>
+            (ch.name || '').toLowerCase().includes(term)
+          );
+          renderGroups(filtered);
+          return;
+        }
+        // Filter by channel name in current playlist
         const filtered = currentPlaylist.filter(ch =>
           (ch.name || '').toLowerCase().includes(term)
         );
@@ -633,7 +647,10 @@
 
     // Filter by category
     let filtered = channels;
-    if (currentCategory === 'favorites') {
+    if (currentCategory === 'youtube') {
+      // use static YouTube list
+      filtered = YOUTUBE_LIVE_CHANNELS.slice();
+    } else if (currentCategory === 'favorites') {
       filtered = channels.filter(ch => favorites.has(ch.id));
     } else if (currentCategory === 'movies') {
       // Movies: filter by group name containing 'movies' or 'vod'
