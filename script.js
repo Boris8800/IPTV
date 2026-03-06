@@ -1128,11 +1128,18 @@
         iframe.style.width = '100%';
         iframe.style.height = '100%';
         iframe.style.border = '0';
-        iframe.allow = 'autoplay; encrypted-media';
+        iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
         video.parentElement.appendChild(iframe);
       }
       const vidId = channel.url.split('v=')[1] || '';
-      iframe.src = 'https://www.youtube.com/embed/' + vidId + '?autoplay=1';
+      const tileUrl = 'https://www.youtube.com/embed/' + vidId +
+        '?autoplay=1' +
+        '&mute=1' +
+        '&enablejsapi=1' +
+        '&controls=1' +
+        '&modestbranding=1' +
+        '&rel=0';
+      iframe.src = tileUrl;
       tiles[idx].channel = channel;
       return;
     }
@@ -1235,7 +1242,14 @@
         container.appendChild(iframe);
       }
       const vidId = channel.url.split('v=')[1] || '';
-      const embedUrl = 'https://www.youtube.com/embed/' + vidId + '?autoplay=1&mute=1';
+      // build embed URL with autoplay and required parameters
+      const embedUrl = 'https://www.youtube.com/embed/' + vidId +
+        '?autoplay=1' +
+        '&mute=1' +
+        '&enablejsapi=1' +
+        '&controls=1' +
+        '&modestbranding=1' +
+        '&rel=0';
       iframe.src = embedUrl;
       // if player throws error message inside iframe, user will see it; otherwise consider opening externally
       showStatus(`Playing ${channel.name}`, 'info', 3000);
