@@ -918,11 +918,13 @@
 
   function enableMultiMode() {
     document.querySelector('.video-container').classList.add('hidden');
-    document.getElementById('multiContainer').classList.remove('hidden');
+    const mc = document.getElementById('multiContainer');
+    mc.classList.remove('hidden');
     if (addScreenBtn) addScreenBtn.style.display = 'inline-flex';
     if (tiles.length === 0) {
       for (let i = 0; i < 4; i++) createTile();
     }
+    createMultiOverlay();
   }
 
   function disableMultiMode() {
@@ -935,6 +937,7 @@
     tiles.length = 0;
     mc.innerHTML = '';
     activeTileIndex = 0;
+    removeMultiOverlay();
   }
 
   function createTile() {
@@ -957,6 +960,23 @@
     document.querySelectorAll('.multi-player').forEach((c,i)=>{
       c.style.border = i===activeTileIndex ? '2px solid var(--primary)' : '2px solid transparent';
     });
+  }
+
+  function createMultiOverlay() {
+    const mc = document.getElementById('multiContainer');
+    if (!mc) return;
+    if (document.getElementById('multiOverlayAdd')) return;
+    const btn = document.createElement('button');
+    btn.id = 'multiOverlayAdd';
+    btn.innerHTML = '<i class="fas fa-plus-square"></i>';
+    btn.title = 'Add screen';
+    btn.onclick = createTile;
+    mc.appendChild(btn);
+  }
+
+  function removeMultiOverlay() {
+    const btn = document.getElementById('multiOverlayAdd');
+    if (btn && btn.parentElement) btn.parentElement.removeChild(btn);
   }
 
   function playChannelInTile(channel, idx) {

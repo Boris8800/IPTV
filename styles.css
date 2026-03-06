@@ -977,6 +977,26 @@ header {
   object-fit: contain;
 }
 
+/* overlay add button inside multi-container */
+#multiOverlayAdd {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(0,0,0,0.5);
+  color: #fff;
+  border: none;
+  padding: 6px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  z-index: 10;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+#multiOverlayAdd:hover {
+  background: rgba(0,0,0,0.7);
+}
+
 .empty-state { 
   text-align: center; 
   padding: 30px 20px; 
