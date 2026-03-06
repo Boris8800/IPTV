@@ -951,32 +951,6 @@ video {
     flex-direction: row;
   }
 
-  /* playlist input group card */
-  .playlist-input-group {
-    background: #1a1f2c;
-    border-radius: 60px;
-    padding: 5px;
-    border: 1px solid #373f57;
-    display: flex;
-    margin: 20px;
-  }
-  .playlist-input-group input {
-    background: transparent;
-    border: none;
-    padding: 15px 20px;
-    color: white;
-    flex: 1;
-    outline: none;
-  }
-  .playlist-input-group button {
-    background: #e64545;
-    border: none;
-    border-radius: 60px;
-    padding: 10px 30px;
-    color: white;
-    font-weight: bold;
-    cursor: pointer;
-  }
 
   /* app header styling */
   .app-header {
